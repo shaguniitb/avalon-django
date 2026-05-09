@@ -4,7 +4,7 @@ from django.contrib.auth import login
 from .models import GameRoom, Player
 
 from django.contrib import messages
-from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES
+from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -47,31 +47,28 @@ def game_room(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
     
     try:
-        current_player = Player.objects.get(user=request.user, game=room)
+        player = Player.objects.get(user=request.user, game=room)
     except Player.DoesNotExist:
         return redirect('home')
     
-    # Fetch Night Phase knowledge if the game has started
-    knowledge = []
-    if room.current_phase != 'LOBBY':
-        knowledge = get_player_knowledge(current_player)
+    knowledge_data = get_player_knowledge(room, player)
 
-    voted_count = room.players.filter(has_voted=True).count()
-    quest_voted_count = room.players.filter(has_quest_voted=True).count()
+    all_players = room.players.all()
+    voted_count = all_players.filter(has_voted=True).count()
+    quest_voted_count = all_players.filter(has_quest_voted=True).count()
 
-    required_team_size = 0
-    required_fails = 0
-    num_players = room.players.count()
-
-    if room.current_phase != 'LOBBY' and num_players in MISSION_RULES:
-        round_index = min(room.current_round - 1, 4)
-        required_team_size, required_fails = MISSION_RULES[num_players][round_index]
+    required_team_size = get_required_team_size(all_players.count(), room.current_round)
+    
+    required_fails = 1
+    if all_players.count() >= 7 and room.current_round == 4:
+        required_fails = 2
     
     context = {
         'room': room,
-        'player': current_player,
-        'all_players': room.players.all().order_by('seat_order'), # Ordered by seat!
-        'knowledge': knowledge,
+        'player': player,
+        'all_players': all_players,
+        'knowledge': knowledge_data["text"],
+        'known_player_ids': knowledge_data["ids"],
         'voted_count': voted_count, # Pass the count to the template
         'quest_voted_count': quest_voted_count, 
         'required_team_size': required_team_size, # Passed to template

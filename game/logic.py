@@ -22,6 +22,28 @@ MISSION_RULES = {
     10: [(3, 1), (4, 1), (4, 1), (5, 2), (5, 1)],
 }
 
+def get_required_team_size(num_players, round_number):
+    """
+    Returns the number of players required for a mission based on 
+    official Avalon rules.
+    """
+    # Mapping: { total_players: [Round 1, R2, R3, R4, R5] }
+    mission_sizes = {
+        5:  [2, 3, 2, 3, 3],
+        6:  [2, 3, 4, 3, 4],
+        7:  [2, 3, 3, 4, 4],
+        8:  [3, 4, 4, 5, 5],
+        9:  [3, 4, 4, 5, 5],
+        10: [3, 4, 4, 5, 5],
+    }
+    
+    # Default to 5-player rules if something goes wrong, 
+    # otherwise pick the list for the current player count
+    team_sizes = mission_sizes.get(num_players, mission_sizes[5])
+    
+    # Return the size for the current round (round_number is 1-indexed)
+    return team_sizes[round_number - 1]
+
 def start_game_and_assign_roles(game_room, special_roles=None):
     if special_roles is None:
         special_roles = []
@@ -112,32 +134,32 @@ def tally_team_votes(game_room, votes):
             
     game_room.save()
 
-def get_player_knowledge(player):
-    """
-    Returns a list of usernames that this player "sees" during the night phase.
-    """
-    game = player.game
-    all_players = game.players.all()
-    
-    knowledge = []
-    
+def get_player_knowledge(room, player):
+    knowledge_text = []
+    known_ids = []
+
+    if room.current_phase == 'LOBBY':
+        return {"text": [], "ids": []}
+
     if player.role == 'Merlin':
-        # Merlin sees all Evil EXCEPT Mordred
-        seen = all_players.filter(is_good=False).exclude(role='Mordred')
-        knowledge = [p.user.username for p in seen]
-        
+        evils = room.players.filter(is_good=False).exclude(role='Mordred')
+        for e in evils:
+            knowledge_text.append(f"{e.user.username} is Evil.")
+            known_ids.append(e.id)
+            
+    elif not player.is_good and player.role != 'Oberon':
+        teammates = room.players.filter(is_good=False).exclude(id=player.id).exclude(role='Oberon')
+        for t in teammates:
+            knowledge_text.append(f"{t.user.username} is a fellow Minion.")
+            known_ids.append(t.id)
+
     elif player.role == 'Percival':
-        # Percival sees Merlin and Morgana, but doesn't know who is who!
-        seen = all_players.filter(role__in=['Merlin', 'Morgana'])
-        knowledge = [p.user.username for p in seen]
-        
-    elif not player.is_good:
-        # Evil players get to see all other Evil players
-        seen = all_players.filter(is_good=False).exclude(id=player.id)
-        knowledge = [p.user.username for p in seen]
-        
-    # Good players (Loyal Servants) see no one, returning an empty list
-    return knowledge
+        merlins = room.players.filter(role__in=['Merlin', 'Morgana'])
+        for m in merlins:
+            knowledge_text.append(f"{m.user.username} is Merlin or Morgana.")
+            known_ids.append(m.id)
+
+    return {"text": knowledge_text, "ids": known_ids}
 
 def tally_quest_votes(game_room, votes):
     """
