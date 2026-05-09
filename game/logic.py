@@ -1,0 +1,196 @@
+# game/logic.py
+import random
+from .models import GameRoom, Player
+
+# Dictionary defining (Good, Evil) counts based on total players
+AVALON_DISTRIBUTION = {
+    5: (3, 2),
+    6: (4, 2),
+    7: (4, 3),
+    8: (5, 3),
+    9: (6, 3),
+    10: (6, 4)
+}
+
+# Format: Player Count: [(Team Size, Fails Needed for R1), (R2), (R3), (R4), (R5)]
+MISSION_RULES = {
+    5: [(2, 1), (3, 1), (2, 1), (3, 1), (3, 1)],
+    6: [(2, 1), (3, 1), (4, 1), (3, 1), (4, 1)],
+    7: [(2, 1), (3, 1), (3, 1), (4, 2), (4, 1)], # Note the 2 fails required for R4!
+    8: [(3, 1), (4, 1), (4, 1), (5, 2), (5, 1)],
+    9: [(3, 1), (4, 1), (4, 1), (5, 2), (5, 1)],
+    10: [(3, 1), (4, 1), (4, 1), (5, 2), (5, 1)],
+}
+
+def start_game_and_assign_roles(game_room, special_roles=None):
+    if special_roles is None:
+        special_roles = []
+
+    players = list(game_room.players.all())
+    num_players = len(players)
+    
+    if num_players not in AVALON_DISTRIBUTION:
+        raise ValueError("Avalon requires between 5 and 10 players.")
+
+    num_good, num_evil = AVALON_DISTRIBUTION[num_players]
+
+    # Base required roles
+    good_roles = ['Merlin']
+    evil_roles = ['Assassin']
+
+    # Inject special roles if requested
+    if 'Percival' in special_roles:
+        good_roles.append('Percival')
+    if 'Morgana' in special_roles:
+        evil_roles.append('Morgana')
+    if 'Mordred' in special_roles:
+        evil_roles.append('Mordred')
+
+    # Check if we accidentally added too many special roles
+    if len(good_roles) > num_good or len(evil_roles) > num_evil:
+        raise ValueError("Too many special roles selected for this player count!")
+    
+    # Fill the remaining slots with generic roles
+    while len(good_roles) < num_good:
+        good_roles.append('Loyal Servant of Arthur')
+
+    while len(evil_roles) < num_evil:
+        evil_roles.append('Minion of Mordred')
+
+    # Combine and shuffle
+
+    roles = good_roles + evil_roles
+    random.shuffle(roles)
+    random.shuffle(players)
+    
+    # Assign everything to the database
+    for index, player in enumerate(players):
+        player.seat_order = index + 1
+        player.role = roles[index]
+        player.is_good = player.role in ['Merlin', 'Percival', 'Loyal Servant of Arthur']
+        player.save()
+        
+    # Update the game room state
+    game_room.current_phase = 'TEAM_BUILDING'
+    game_room.current_leader = players[0]  # Seat 1 is the first leader
+    game_room.save()
+
+    return True
+
+
+
+def tally_team_votes(game_room, votes):
+    """
+    Takes a list of boolean votes.
+    Advances game state based on whether the team is approved or rejected.
+    """
+    approves = votes.count(True)
+    rejects = votes.count(False)
+    
+    # A tie is a rejection in Avalon
+    if approves > rejects:
+        # Team is approved! Move to Questing phase.
+        game_room.current_phase = 'QUESTING'
+        game_room.failed_votes = 0  # Reset the 5-vote track
+    else:
+        # Team is rejected!
+        game_room.failed_votes += 1
+        
+        if game_room.failed_votes >= 5:
+            game_room.current_phase = 'EVIL_WINS' # Evil wins if 5 teams fail
+        else:
+            # Pass the leader token to the next seat
+            current_seat = game_room.current_leader.seat_order
+            total_players = game_room.players.count()
+            
+            # Math to loop back to seat 1 if the last seat was leader
+            next_seat = (current_seat % total_players) + 1 
+            next_leader = game_room.players.get(seat_order=next_seat)
+            
+            game_room.current_leader = next_leader
+            game_room.current_phase = 'TEAM_BUILDING'
+            
+    game_room.save()
+
+def get_player_knowledge(player):
+    """
+    Returns a list of usernames that this player "sees" during the night phase.
+    """
+    game = player.game
+    all_players = game.players.all()
+    
+    knowledge = []
+    
+    if player.role == 'Merlin':
+        # Merlin sees all Evil EXCEPT Mordred
+        seen = all_players.filter(is_good=False).exclude(role='Mordred')
+        knowledge = [p.user.username for p in seen]
+        
+    elif player.role == 'Percival':
+        # Percival sees Merlin and Morgana, but doesn't know who is who!
+        seen = all_players.filter(role__in=['Merlin', 'Morgana'])
+        knowledge = [p.user.username for p in seen]
+        
+    elif not player.is_good:
+        # Evil players get to see all other Evil players
+        seen = all_players.filter(is_good=False).exclude(id=player.id)
+        knowledge = [p.user.username for p in seen]
+        
+    # Good players (Loyal Servants) see no one, returning an empty list
+    return knowledge
+
+def tally_quest_votes(game_room, votes):
+    """
+    Takes a list of booleans (True for Success, False for Fail).
+    Updates the score and resets for the next round.
+    """
+    fails = votes.count(False)
+
+    num_players = game_room.players.count()
+    # current_round is 1-indexed, but lists are 0-indexed
+    round_index = min(game_room.current_round - 1, 4) 
+    
+    # Fetch the required fails from our matrix
+    _, required_fails = MISSION_RULES[num_players][round_index]
+    
+    # Check if Evil got enough fails to sabotage the mission
+    if fails >= required_fails:
+        game_room.score_evil += 1
+    else:
+        game_room.score_good += 1
+        
+    # Check for game over conditions
+    if game_room.score_good >= 3:
+        # Check if there is an Assassin in the game
+        has_assassin = game_room.players.filter(role='Assassin').exists()
+        if has_assassin:
+            game_room.current_phase = 'ASSASSIN_PHASE'
+        else:
+            game_room.current_phase = 'GOOD_WINS'
+    elif game_room.score_evil >= 3:
+        game_room.current_phase = 'EVIL_WINS'
+    else:
+        # Move to the next round
+        game_room.current_round += 1
+        game_room.current_phase = 'TEAM_BUILDING'
+        
+        # Pass the leader token to the next seat
+        current_seat = game_room.current_leader.seat_order
+        total_players = game_room.players.count()
+        next_seat = (current_seat % total_players) + 1 
+        game_room.current_leader = game_room.players.get(seat_order=next_seat)
+        
+    game_room.save()
+
+def attempt_assassination(game_room, target_player_id):
+    """
+    Checks if the Assassin successfully guessed Merlin.
+    """
+    target = game_room.players.get(id=target_player_id)
+    
+    if target.role == 'Merlin':
+        game_room.current_phase = 'EVIL_WINS'
+    else:
+        game_room.current_phase = 'GOOD_WINS'
+        
+    game_room.save()

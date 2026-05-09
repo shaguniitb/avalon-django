@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head><title>Room {{ room.room_code }}</title></head>
+<body>
+    <h1>Avalon Room: {{ room.room_code }}</h1>
+
+    <form action="{% url 'leave_game' room.room_code %}" method="POST" style="margin-bottom: 20px;">
+        {% csrf_token %}
+        <button type="submit" style="background-color: #c0392b; color: white; border: none; padding: 5px 10px; border-radius: 4px;">
+            {% if player.user == room.host %}End Game & Close Room{% else %}Leave Game{% endif %}
+        </button>
+    </form>
+
+    <h3>Current Phase: {{ room.current_phase }}</h3>
+    <h3 style="color: #8e44ad;">Score - Good: {{ room.score_good }} | Evil: {{ room.score_evil }}</h3>
+    
+    {% if messages %}
+        <ul style="color: red;">
+            {% for message in messages %}
+                <li><strong>{{ message }}</strong></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    
+    <hr>
+    <h2>Your Info</h2>
+    <p>Logged in as: <strong>{{ player.user.username }}</strong></p>
+    {% if player.role %}
+        <p>Your Role: <strong>{{ player.role }}</strong></p>
+        <p>Alignment: {% if player.is_good %}Good{% else %}Evil{% endif %}</p>
+        <div style="background-color: #2c3e50; color: white; padding: 15px; margin-top: 15px; border-radius: 8px;">
+            <h4 style="margin-top: 0;">Night Phase Vision:</h4>
+            {% if knowledge %}
+                <p>You open your eyes and see:</p>
+                <ul>
+                    {% for name in knowledge %}
+                        <li><strong>{{ name }}</strong></li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p><em>You keep your eyes closed. You see no one.</em></p>
+            {% endif %}
+        </div>
+
+
+    {% else %}
+        <p><em>Waiting for host to start the game...</em></p>
+    {% endif %}
+
+    <hr>
+    <h2>Game Action</h2>
+
+
+    {% if room.current_phase == 'TEAM_BUILDING' %}
+        {% if player == room.current_leader %}
+            <div style="border: 2px solid #2ecc71; padding: 15px; border-radius: 8px;">
+                <h3>You are the Leader!</h3>
+                <p>Select exactly <strong>{{ required_team_size }}</strong> players for Mission {{ room.current_round }}:</p>
+                <form action="{% url 'propose_team' room.room_code %}" method="POST">
+                    {% csrf_token %}
+                    {% for p in all_players %}
+                        <div>
+                            <input type="checkbox" id="player_{{ p.id }}" name="team_members" value="{{ p.id }}">
+                            <label for="player_{{ p.id }}">{{ p.user.username }}</label>
+                        </div>
+                    {% endfor %}
+                    <br>
+                    <button type="submit" style="padding: 8px 16px; background-color: #2ecc71; color: white; border: none; border-radius: 4px;">Propose Team</button>
+                </form>
+            </div>
+        {% else %}
+            <p><strong>{{ room.current_leader.user.username }}</strong> is proposing a team of <strong>{{ required_team_size }}</strong> players. Waiting...</p>
+        {% endif %}
+    
+    {% elif room.current_phase == 'TEAM_VOTING' %}
+
+        <div style="border: 2px solid #f39c12; padding: 15px; border-radius: 8px;">
+            <h3>Team Voting</h3>
+            <p>The proposed team is: 
+                {% for team_member in room.proposed_team.all %}
+                    <strong>{{ team_member.user.username }}</strong>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </p>
+            
+            {% if not player.has_voted %}
+                <p>Do you approve this team?</p>
+                <form action="{% url 'cast_vote' room.room_code %}" method="POST" style="display: inline-block;">
+                    {% csrf_token %}
+                    <button type="submit" name="vote_choice" value="approve" style="background-color: #2ecc71; color: white; padding: 10px; border: none; border-radius: 4px; margin-right: 10px;">Approve</button>
+                    <button type="submit" name="vote_choice" value="reject" style="background-color: #e74c3c; color: white; padding: 10px; border: none; border-radius: 4px;">Reject</button>
+                </form>
+            {% else %}
+                <p><em>Your vote is locked in. Waiting for others...</em></p>
+            {% endif %}
+            
+            <p style="margin-top: 15px; font-size: 14px;">Votes in: <strong>{{ voted_count }} / {{ all_players.count }}</strong></p>
+        </div>
+
+    {% elif room.current_phase == 'QUESTING' %}
+        <div style="border: 2px solid #3498db; padding: 15px; border-radius: 8px;">
+            <h3>Quest Phase</h3>
+            <p>The following team is on the mission: 
+                {% for team_member in room.proposed_team.all %}
+                    <strong>{{ team_member.user.username }}</strong>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </p>
+
+            <p style="color: #e74c3c; font-size: 14px;"><em>Note: This mission requires <strong>{{ required_fails }}</strong> fail vote(s) to fail.</em></p>
+            
+            {% if player in room.proposed_team.all %}
+                {% if not player.has_quest_voted %}
+                    <p>Cast your vote for the mission:</p>
+                    <form action="{% url 'cast_quest_vote' room.room_code %}" method="POST" style="display: inline-block;">
+                        {% csrf_token %}
+                        <button type="submit" name="quest_vote" value="success" style="background-color: #3498db; color: white; padding: 10px; border: none; border-radius: 4px; margin-right: 10px;">Success</button>
+                        <button type="submit" name="quest_vote" value="fail" style="background-color: #e74c3c; color: white; padding: 10px; border: none; border-radius: 4px;">Fail</button>
+                    </form>
+                {% else %}
+                    <p><em>Your mission vote is locked in. Waiting for the rest of the team...</em></p>
+                {% endif %}
+            {% else %}
+                <p><em>You are not on this mission. Waiting for the team to return...</em></p>
+            {% endif %}
+            
+            <p style="margin-top: 15px; font-size: 14px;">Votes in: <strong>{{ quest_voted_count }} / {{ room.proposed_team.count }}</strong></p>
+        </div>
+
+    {% elif room.current_phase == 'ASSASSIN_PHASE' %}
+        <div style="border: 2px solid #8e44ad; padding: 15px; border-radius: 8px;">
+            <h3 style="color: #8e44ad;">Assassin Phase</h3>
+            <p>Good has completed 3 missions! But the Assassin has one final chance...</p>
+            
+            {% if player.role == 'Assassin' %}
+                <p><strong>You are the Assassin!</strong> Identify Merlin to steal the victory for Evil.</p>
+                <form action="{% url 'assassinate' room.room_code %}" method="POST">
+                    {% csrf_token %}
+                    <p>Select your target:</p>
+                    {% for p in all_players %}
+                        {% if p.is_good %}
+                            <div>
+                                <input type="radio" id="target_{{ p.id }}" name="target_player" value="{{ p.id }}" required>
+                                <label for="target_{{ p.id }}">{{ p.user.username }}</label>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    <br>
+                    <button type="submit" style="padding: 8px 16px; background-color: #8e44ad; color: white; border: none; border-radius: 4px;">Assassinate</button>
+                </form>
+            {% else %}
+                <p><em>The Assassin is currently deciding who to strike. Hold your breath...</em></p>
+            {% endif %}
+        </div>
+
+    {% elif room.current_phase == 'GOOD_WINS' %}
+        <h2 style="color: #3498db;">The Forces of Good Have Prevailed! (3 Missions Succeeded)</h2>
+    {% elif room.current_phase == 'EVIL_WINS' %}
+        <h2 style="color: #e74c3c;">The Forces of Evil Have Prevailed!</h2>
+
+    {% endif %}
+
+
+    <hr>
+    <h2>Players in Lobby ({{ all_players.count }})</h2>
+    <ul>
+        {% for p in all_players %}
+            <li style="margin-bottom: 5px;">
+                {{ p.user.username }}
+                {% if p.user == room.host %} <strong>(Host)</strong> {% endif %}
+                
+                {% if player.user == room.host and p.user != room.host and room.current_phase == 'LOBBY' %}
+                    <form action="{% url 'kick_player' room.room_code p.id %}" method="POST" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" style="background-color: #e74c3c; color: white; border: none; border-radius: 3px; font-size: 10px; padding: 2px 5px; margin-left: 10px;">Kick</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% if player.user == room.host and room.current_phase == 'LOBBY' %}
+        <hr>
+        <div style="border: 2px solid #2c3e50; padding: 15px; border-radius: 8px;">
+            <h3>Host Controls</h3>
+            <form action="{% url 'start_game' room.room_code %}" method="POST">
+                {% csrf_token %}
+                
+                <p><strong>Select Optional Roles:</strong><br>
+                <small><em>(Merlin and Assassin are included automatically)</em></small></p>
+                
+                <div style="margin-bottom: 15px;">
+                    <div>
+                        <input type="checkbox" id="role_percival" name="special_roles" value="Percival">
+                        <label for="role_percival">Percival (Good)</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="role_morgana" name="special_roles" value="Morgana">
+                        <label for="role_morgana">Morgana (Evil)</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="role_mordred" name="special_roles" value="Mordred">
+                        <label for="role_mordred">Mordred (Evil)</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="role_oberon" name="special_roles" value="Oberon">
+                        <label for="role_oberon">Oberon (Evil)</label>
+                    </div>
+                </div>
+                
+                <button type="submit" style="padding: 10px 20px; font-size: 16px; background-color: #2c3e50; color: white; border: none; border-radius: 4px;">Start Game</button>
+            </form>
+        </div>
+    {% endif %}
+
+
+
+
+<script>
+        const roomCode = "{{ room.room_code }}";
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const gameSocket = new WebSocket(
+            wsScheme + '://' + window.location.host + '/ws/room/' + roomCode + '/'
+        );
+
+        gameSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'game_update') {
+                // Instantly reload the page to get the new game state!
+                window.location.reload();
+            }
+        };
+
+        gameSocket.onclose = function(e) {
+            console.error('Game socket closed unexpectedly');
+        };
+    </script>
+</body>
+</html>
+
+    
+</body>
+</html>

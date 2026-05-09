@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head><title>Play Avalon</title></head>
+<body>
+    <h1>Join an Avalon Game</h1>
+    <form method="POST">
+        {% csrf_token %}
+        <label>Username:</label>
+        <input type="text" name="username" required><br><br>
+        
+        <label>Room Code:</label>
+        <input type="text" name="room_code" required maxlength="6"><br><br>
+        
+        <button type="submit">Join / Create Room</button>
+    </form>
+</body>
+</html>
