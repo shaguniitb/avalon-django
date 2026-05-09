@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import login
 from .models import GameRoom, Player
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 
 from django.contrib import messages
 from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size
@@ -98,31 +100,25 @@ def start_game(request, room_code):
             
     return redirect('game_room', room_code=room_code)
 
+@require_POST
 def propose_team(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
-    
-    try:
-        current_player = Player.objects.get(user=request.user, game=room)
-    except Player.DoesNotExist:
-        return redirect('home')
+    player = get_object_or_404(Player, user=request.user, game=room)
 
-    # Security check: Must be POST, phase must be TEAM_BUILDING, and user MUST be the leader
-    if request.method == "POST" and room.current_phase == 'TEAM_BUILDING' and room.current_leader == current_player:
-        # Get the list of player IDs checked in the HTML form
-        selected_player_ids = request.POST.getlist('team_members')
+    # 1. Validation: Only the leader can propose
+    if player != room.current_leader:
+        return redirect('game_room', room_code=room_code)
 
-        num_players = room.players.count()
-        round_index = min(room.current_round - 1, 4)
-        required_team_size, _ = MISSION_RULES[num_players][round_index]
+    # 2. Validation: Check team size (Optional but recommended)
+    current_player_count = room.players.count()
+    required_size = get_required_team_size(current_player_count, room.current_round)
+    if room.proposed_team.count() != required_size:
+        return redirect('game_room', room_code=room_code)
 
-        if len(selected_player_ids) != required_team_size:
-            # If they pick the wrong amount, show an error and do not advance the game!
-            messages.error(request, f"Invalid team size! Mission {room.current_round} requires exactly {required_team_size} players.")
-        else:
-            room.proposed_team.set(selected_player_ids)
-            room.current_phase = 'TEAM_VOTING'
-            room.save()
-            broadcast_game_update(room_code)
+    # 3. ADVANCE THE PHASE
+    # Make sure this matches the string your template/JavaScript expects
+    room.current_phase = "TEAM_VOTING" 
+    room.save()
 
     return redirect('game_room', room_code=room_code)
 
@@ -237,3 +233,25 @@ def kick_player(request, room_code, player_id):
             pass
 
     return redirect('game_room', room_code=room_code)
+
+@require_POST
+def toggle_player_selection(request, room_code, player_id):
+    room = get_object_or_404(GameRoom, room_code=room_code)
+    
+    # Verify the requester is actually the host/leader
+    if request.user != room.current_leader.user:
+        return JsonResponse({'status': 'unauthorized'}, status=403)
+        
+    if room.current_phase != 'TEAM_BUILDING':
+        return JsonResponse({'status': 'wrong_phase'}, status=400)
+
+    target_player = get_object_or_404(Player, id=player_id)
+    
+    if target_player in room.proposed_team.all():
+        room.proposed_team.remove(target_player)
+        action = "removed"
+    else:
+        room.proposed_team.add(target_player)
+        action = "added"
+        
+    return JsonResponse({'status': 'success', 'action': action})

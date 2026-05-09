@@ -8,303 +8,272 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
-        /* Light Slate Theme */
-        body { 
-            background-color: #f0f2f5; 
-            color: #333; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        body { background-color: #f0f2f5; color: #333; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        .game-card { background-color: #ffffff; border: none; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        
+        /* TABLE STYLING */
+        .table-container { width: 100%; max-width: 600px; margin: 100px auto; position: relative; aspect-ratio: 1 / 1; }
+        #round-table {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 70%; height: 70%; border: 8px solid #4e342e; border-radius: 50%; 
+            background-color: #795548; box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 15px 30px rgba(0,0,0,0.2);
+            z-index: 1; display: flex; align-items: center; justify-content: center; gap: 12px;
+        }
+        .mission-dot {
+            width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.7);
+            display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;
+        }
+
+        /* PLAYER POSITIONING */
+        .player-seat { position: absolute; z-index: 10; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        /* CROWN NW */
+        .crown-icon { 
+            position: absolute; top: -35px; left: -20px; 
+            transform: rotate(-45deg); font-size: 2.2rem; z-index: 60; 
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+        }
+
+        /* AVATARS */
+        .player-avatar {
+            width: 80px; height: 80px; border-radius: 50%; background-color: #adb5bd;
+            border: 4px solid #fff; display: flex; align-items: center; justify-content: center;
+            position: relative; z-index: 5; transition: all 0.3s ease; cursor: pointer;
+        }
+        .identity-good { background-color: #0d6efd !important; }
+        .identity-evil { background-color: #dc3545 !important; }
+
+        /* SELECTION SALIENCY (3D LIFT) */
+        .player-seat.on-team { z-index: 100; }
+        .on-team .player-avatar {
+            transform: translateY(-18px) scale(1.2); 
+            border: 5px solid #003366 !important;
+            animation: selection-pulse 2s infinite;
+        }
+        @keyframes selection-pulse {
+            0% { box-shadow: 0 0 10px #003366, 0 0 15px rgba(0, 51, 102, 0.4); }
+            50% { box-shadow: 0 0 25px #0056b3, 0 0 35px rgba(255, 215, 0, 0.5); }
+            100% { box-shadow: 0 0 10px #003366, 0 0 15px rgba(0, 51, 102, 0.4); }
         }
         
-        .game-card { 
-            background-color: #ffffff; 
-            border: none; 
-            border-radius: 15px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-        }
-
-        /* Round Table Large Scale Logic */
-        .table-container {
-            width: 100%;
-            max-width: 550px;
-            margin: 50px auto; /* Increased margin for Shield space */
-            position: relative;
-            aspect-ratio: 1 / 1;
-        }
-
-        #round-table {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            height: 70%;
-            border: 8px solid #4e342e; 
-            border-radius: 50%; 
-            background-color: #795548; 
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.3), 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 1;
-        }
-
-        /* THE SEAT - Essential for absolute positioning */
-        .player-seat {
-            position: absolute;
-            z-index: 10;
-            transition: all 0.4s ease-in-out;
-            white-space: nowrap;
-        }
-
-        /* THE SHIELD ICON - Logic for when on team */
+        /* SHIELD ABOVE LIFTED PLAYER */
         .player-seat.on-team::before {
-            content: "🛡️";
-            position: absolute;
-            top: -40px; 
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.8rem;
-            z-index: 50;
-            line-height: 1;
+            content: "🛡️"; position: absolute; top: -75px; left: 50%; 
+            transform: translateX(-50%); font-size: 2.5rem; z-index: 110;
+        }
+        
+        /* DIMMING */
+        .table-container:has(.on-team) .player-seat:not(.on-team) { opacity: 0.6; filter: grayscale(40%); }
+
+        /* PERCIVAL VISION */
+        .percival-vision { background-color: #495057 !important; }
+        .percival-vision::after { 
+            content: "?"; position: absolute; font-size: 3.5rem; 
+            font-weight: 900; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .percival-vision i { display: none; }
+
+        /* LABELS & YOU BADGE */
+        .username-container { display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+        .username-text { font-weight: 700; font-size: 1rem; color: #2c3e50; }
+        .on-team .username-text { color: #003366; font-weight: 900; }
+        
+        .you-label { 
+            font-size: 0.65rem; font-weight: 900; background: #0d6efd; color: white; 
+            padding: 2px 6px; border-radius: 4px; text-transform: uppercase; 
+            margin-left: 6px; 
         }
 
-        /* Identity & Status Badges */
-        .badge.rounded-pill {
-            padding: 10px 20px;
-            font-size: 1rem;
-            font-weight: 600;
-            position: relative;
+        .known-evil::after { 
+            content: "💀"; position: absolute; bottom: -5px; right: -5px; 
+            font-size: 1.3rem; background: white; border-radius: 50%; padding: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-
-        /* SELECTION EFFECT (The 'Inlet' and Glow) */
-        .selected-player-glow {
-            transform: scale(1.2) !important;
-            z-index: 25 !important;
-            outline: 3px solid rgba(0, 0, 0, 0.25) !important;
-            outline-offset: -6px !important;
-            box-shadow: 0 0 20px rgba(0, 51, 102, 0.6) !important;
-        }
-
-                /* THE KNOWLEDGE ICON (The Eye) */
-        .player-seat.known-to-percival::after {
-            content: "👁️";
-            position: absolute;
-            bottom: -25px; /* Sits below the badge */
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.4rem;
-            z-index: 40;
-            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
-        }
-
-        /* THE MINION ICON (The Skull) */
-        /* For standard Minions seeing each other */
-        .player-seat.known-evil::after {
-            content: "💀";
-            position: absolute;
-            bottom: -25px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.4rem;
-            z-index: 40;
-        }
-
-        /* Pulse Animations */
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.6); }
-            70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-        }
-        @keyframes pulse-blue {
-            0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4); }
-            70% { box-shadow: 0 0 0 12px rgba(13, 110, 253, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
-        }
-
-        .bg-danger { animation: pulse-red 2s infinite; }
-        .bg-info { animation: pulse-blue 2s infinite; }
-
-        .phase-badge { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body class="py-4">
 
-    <div class="container" style="max-width: 800px;">
+    <div class="container" style="max-width: 850px;">
         
-        <div class="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
             <div>
-                <h1 class="h3 mb-1">Room: <span class="text-warning">{{ room.room_code }}</span></h1>
-                <div class="d-flex gap-2 align-items-center">
-                    <span class="badge bg-secondary phase-badge">Phase: {{ room.current_phase }}</span>
-                    <span class="badge {% if player.is_good %}bg-primary{% else %}bg-danger{% endif %} py-2 px-3 shadow-sm">
-                        <i class="bi bi-person-fill"></i> <strong>{{ player.user.username }}</strong>
-                    </span>
-                </div>
+                <h1 class="h3 mb-0">Room: <span class="text-primary fw-bold">{{ room.room_code }}</span></h1>
+                <span class="badge bg-dark text-uppercase">Phase: {{ room.current_phase }}</span>
             </div>
-            <form action="{% url 'leave_game' room.room_code %}" method="POST" class="m-0">
+            <form action="{% url 'leave_game' room.room_code %}" method="POST">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger btn-sm">
-                    {% if player.user == room.host %}End & Close Room{% else %}Leave Game{% endif %}
-                </button>
+                <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
             </form>
         </div>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        {% if room.current_phase != 'LOBBY' %}
+        <div class="card game-card mb-4 border-start border-4 {% if player.is_good %}border-primary{% else %}border-danger{% endif %} shadow-sm">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted small text-uppercase fw-bold mb-1" style="letter-spacing: 1px;">Your Secret Role</h6>
+                    <h2 class="mb-0 {% if player.is_good %}text-primary{% else %}text-danger{% endif %} fw-bold">{{ player.role }}</h2>
                 </div>
+                <div class="text-end">
+                    <span class="badge {% if player.is_good %}bg-primary{% else %}bg-danger{% endif %} rounded-pill px-3 py-2 mb-1">
+                        TEAM {% if player.is_good %}GOOD{% else %}EVIL{% endif %}
+                    </span>
+                    {% if knowledge %}
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-info-circle"></i> 
+                            {% for info in knowledge %}{{ info }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="table-container">
+            <div id="round-table">
+                {% for mission in room.missions.all %}
+                    {% if mission.is_completed %}
+                        <div class="mission-dot" style="background: {% if mission.did_succeed %}#0d6efd{% else %}#dc3545{% endif %};">
+                            {% if mission.did_succeed %}✓{% else %}✗{% endif %}
+                        </div>
+                    {% endif %}
+                {% empty %}
+                    <div class="text-white-50 small">Quest Tracker</div>
+                {% endfor %}
+            </div>
+            
+            {% for p in all_players %}
+                <div class="player-seat translate-middle {% if p in room.proposed_team.all %} on-team {% endif %}"
+                     data-index="{{ forloop.counter0 }}" data-total="{{ all_players.count }}">
+                    <div class="d-flex flex-column align-items-center">
+                        {% if p == room.current_leader %}
+                            <span class="crown-icon">👑</span>
+                        {% endif %}
+                        
+                        <div class="player-avatar 
+                            {% if p == player %}
+                                {% if p.is_good %} identity-good {% else %} identity-evil {% endif %}
+                            {% elif p.id in known_player_ids %}
+                                {% if player.role == 'Percival' %} percival-vision {% else %} identity-evil known-evil {% endif %}
+                            {% endif %}"
+                            onclick="handleAvatarClick('{{ p.id }}')" id="avatar-{{ p.id }}"
+                            style="border: 4px solid {% if p == room.current_leader %} #b8860b {% else %} #fff {% endif %};">
+                            <i class="bi bi-person-fill text-white" style="font-size: 2.2rem;"></i>
+                        </div>
+
+                        <div class="username-container">
+                            <div class="username-text">{{ p.user.username }}</div>
+                            {% if p == player %}<div class="you-label">You</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if room.current_round > 1 and room.current_phase == 'TEAM_BUILDING' %}
+            {% for mission in room.missions.all %}
+                {% if mission.round_number == room.current_round|add:"-1" %}
+                    <div class="alert {% if mission.did_succeed %}alert-primary border-primary{% else %}alert-danger border-danger{% endif %} text-center shadow-sm mb-4 mx-auto border-2" style="max-width: 600px;">
+                        <h4 class="mb-2 fw-bold">
+                            {% if mission.did_succeed %}
+                                <i class="bi bi-shield-fill-check"></i> Mission {{ mission.round_number }} Succeeded!
+                            {% else %}
+                                <i class="bi bi-shield-fill-x"></i> Mission {{ mission.round_number }} Failed!
+                            {% endif %}
+                        </h4>
+                        <p class="mb-0 fs-5">
+                            The team returned with <strong>{{ mission.fails_count }}</strong> Fail vote{% if mission.fails_count != 1 %}s{% endif %}.
+                        </p>
+                    </div>
+                {% endif %}
             {% endfor %}
         {% endif %}
 
-        {% if room.current_phase != 'LOBBY' %}
-        <div class="card game-card mb-4 border-start border-4 {% if player.is_good %}border-primary{% else %}border-danger{% endif %}">
-            <div class="card-body">
-                <h5 class="card-title text-muted small text-uppercase">Your Secret Identity</h5>
-                <div class="d-flex align-items-center gap-3">
-                    <h2 class="mb-0 {% if player.is_good %}text-primary{% else %}text-danger{% endif %}">{{ player.role }}</h2>
-                    <span class="badge {% if player.is_good %}bg-primary{% else %}bg-danger{% endif %} rounded-pill">
-                        Team: {% if player.is_good %}Good{% else %}Evil{% endif %}
-                    </span>
-                </div>
-                
-                {% if knowledge %}
-                <div class="mt-3 p-3 bg-light rounded border">
-                    <small class="text-muted d-block mb-1">SECRET KNOWLEDGE:</small>
-                    <ul class="mb-0 ps-3">
-                        {% for info in knowledge %}
-                            <li class="small"><strong>{{ info }}</strong></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="card game-card mb-4">
-            <div class="card-body text-center py-5">
-                <div class="table-container">
-                    <div id="round-table"></div>
-                    
-                        {% for p in all_players %}
-                        <div class="player-seat translate-middle 
-                            {% if p in room.proposed_team.all %} on-team {% endif %}
-                            {% if p.id in known_player_ids %}
-                                {% if player.role == 'Percival' %} known-to-percival {% else %} known-evil {% endif %}
-                            {% endif %}"
-                            data-index="{{ forloop.counter0 }}"
-                            data-total="{{ all_players.count }}">
-                            
-                            <div class="d-flex flex-column align-items-center">
-                                {% if room.current_phase != 'LOBBY' and p == room.current_leader %}
-                                    <span style="font-size: 1.5rem; margin-bottom: -5px; z-index: 60;">👑</span>
-                                {% endif %}
-                                
-                                <span class="badge rounded-pill shadow
-                                    {% if p == player %}
-                                        bg-primary
-                                    {% elif p.id in known_player_ids and player.role != 'Percival' %}
-                                        bg-danger /* Minions still see each other as Red */
-                                    {% else %}
-                                        bg-secondary /* Percival sees both Merlin/Morgana as Gray/Neutral */
-                                    {% endif %}
-                                    {% if p in room.proposed_team.all %} selected-player-glow {% endif %}"
-                                    
-                                    style="border: 4px solid 
-                                        {% if room.current_phase != 'LOBBY' and p == room.current_leader %} #b8860b 
-                                        {% elif p in room.proposed_team.all %} #003366 
-                                        {% else %} transparent {% endif %};">
-                                    
-                                    {% if p == player %}
-                                        <span class="text-uppercase d-block" style="font-size: 0.6rem; opacity: 0.9; margin-bottom: -2px;">You</span>
-                                    {% endif %}
-                                    {{ p.user.username }}
-                                </span>
-                            </div>
-                        </div>
-                        {% endfor %}                    
-
-
-
-                </div>
-            </div>
-        </div>
-
-        {% if room.current_phase != 'LOBBY' %}
-        <div class="card game-card mb-4 border-top border-4 border-warning">
+        {% if room.current_phase == 'TEAM_VOTING' %}
+        <div class="card game-card mt-5 border-top border-4 border-info shadow">
             <div class="card-body text-center py-4">
-                <h4 class="mb-3">Current Task</h4>
-
-                {% if room.current_phase == 'TEAM_PROPOSAL' %}
-                    {% if player == room.current_leader %}
-                        <p class="lead">Select <strong>{{ required_team_size }}</strong> players.</p>
-                        <form action="{% url 'propose_team' room.room_code %}" method="POST">
-                            {% csrf_token %}
-                            <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-                                {% for p in all_players %}
-                                    <input type="checkbox" class="btn-check" name="team_members" value="{{ p.id }}" id="player{{ p.id }}" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="player{{ p.id }}">{{ p.user.username }}</label>
-                                {% endfor %}
-                            </div>
-                            <button type="submit" class="btn btn-warning btn-lg shadow px-5">Propose Team</button>
-                        </form>
-                    {% else %}
-                        <p class="text-muted">Waiting for <strong>{{ room.current_leader.user.username }}</strong> to propose...</p>
-                    {% endif %}
-
-                {% elif room.current_phase == 'TEAM_VOTING' %}
-                    <p class="lead">Vote on: 
-                        {% for tm in room.proposed_team.all %}<span class="badge bg-dark">{{ tm.user.username }}</span> {% endfor %}
-                    </p>
-                    {% if not player.has_voted %}
-                        <form action="{% url 'vote_on_team' room.room_code %}" method="POST" class="d-flex justify-content-center gap-3">
-                            {% csrf_token %}
-                            <button type="submit" name="vote" value="approve" class="btn btn-success btn-lg px-4">Approve</button>
-                            <button type="submit" name="vote" value="reject" class="btn btn-danger btn-lg px-4">Reject</button>
-                        </form>
-                    {% else %}
-                        <div class="alert alert-info">Vote recorded. ({{ voted_count }}/{{ all_players.count }} in)</div>
-                    {% endif %}
-
-                {% elif room.current_phase == 'QUEST' %}
-                    {% if player in room.proposed_team.all %}
-                        {% if not player.has_quest_voted %}
-                            <form action="{% url 'vote_on_quest' room.room_code %}" method="POST" class="d-flex justify-content-center gap-3">
-                                {% csrf_token %}
-                                <button type="submit" name="vote" value="success" class="btn btn-primary btn-lg px-4">Success</button>
-                                {% if not player.is_good %}<button type="submit" name="vote" value="fail" class="btn btn-danger btn-lg px-4">Fail</button>{% endif %}
-                            </form>
-                        {% else %}
-                            <div class="alert alert-info">Quest action cast.</div>
-                        {% endif %}
-                    {% else %}
-                        <p class="text-muted">Quest underway...</p>
-                    {% endif %}
+                <h4 class="mb-2 fw-bold">Approve this Team?</h4>
+                <p class="text-muted mb-4">
+                    The Leader has proposed: 
+                    {% for tm in room.proposed_team.all %}
+                        <span class="badge bg-dark mx-1">{{ tm.user.username }}</span>
+                    {% endfor %}
+                </p>
+                
+                {% if not player.has_voted %}
+                    <form action="{% url 'cast_vote' room.room_code %}" method="POST" class="d-flex justify-content-center gap-3">
+                        {% csrf_token %}
+                        <button type="submit" name="vote_choice" value="approve" class="btn btn-success btn-lg px-5 shadow-sm fw-bold">
+                            <i class="bi bi-check-lg"></i> APPROVE
+                        </button>
+                        <button type="submit" name="vote_choice" value="reject" class="btn btn-danger btn-lg px-5 shadow-sm fw-bold">
+                            <i class="bi bi-x-lg"></i> REJECT
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-light border py-3 d-inline-block">
+                        <i class="bi bi-envelope-check-fill text-success me-2"></i>
+                        <strong>Vote Submitted.</strong> 
+                        <span class="text-muted ms-2">Waiting for others...</span>
+                    </div>
                 {% endif %}
             </div>
         </div>
         {% endif %}
 
-        {% if room.current_phase == 'LOBBY' %}
-        <div class="card game-card text-center">
-            <div class="card-body py-4">
-                <h4 class="mb-3">Lobby ({{ all_players.count }}/10)</h4>
-                {% if player.user == room.host %}
-                    <form action="{% url 'start_game' room.room_code %}" method="POST">
-                        {% csrf_token %}
-                        <div class="row justify-content-center mb-3">
-                            <div class="col-md-6 text-start">
-                                <div class="form-check"><input class="form-check-input" type="checkbox" name="use_mordred"> <label>Mordred</label></div>
-                                <div class="form-check"><input class="form-check-input" type="checkbox" name="use_morgana"> <label>Morgana</label></div>
-                                <div class="form-check"><input class="form-check-input" type="checkbox" name="use_percival"> <label>Percival</label></div>
-                            </div>
+
+        {% if room.current_phase == 'QUESTING' %}
+        <div class="card game-card mt-5 border-top border-4 border-primary shadow">
+            <div class="card-body text-center py-4">
+                <h4 class="mb-2 fw-bold text-primary">The Quest is Underway!</h4>
+                
+                {% if player in room.proposed_team.all %}
+                    <p class="text-muted mb-4">You are on this mission. Choose your action.</p>
+                    
+                    {% if not player.has_quest_voted %}
+                        <form action="{% url 'cast_quest_vote' room.room_code %}" method="POST" class="d-flex justify-content-center gap-3">
+                            {% csrf_token %}
+                            <button type="submit" name="quest_vote" value="success" class="btn btn-primary btn-lg px-5 shadow-sm fw-bold">
+                                <i class="bi bi-shield-check"></i> SUCCESS
+                            </button>
+                            
+                            {% if not player.is_good %}
+                                <button type="submit" name="quest_vote" value="fail" class="btn btn-danger btn-lg px-5 shadow-sm fw-bold">
+                                    <i class="bi bi-shield-x"></i> FAIL
+                                </button>
+                            {% endif %}
+                        </form>
+                    {% else %}
+                        <div class="alert alert-light border py-3 d-inline-block">
+                            <i class="bi bi-envelope-check-fill text-primary me-2"></i>
+                            <strong>Action Submitted.</strong> 
+                            <span class="text-muted ms-2">Waiting for the rest of the team...</span>
                         </div>
-                        <button type="submit" class="btn btn-success btn-lg px-5">Start Game</button>
-                    </form>
-                {% else %}<p class="text-muted">Waiting for host...</p>{% endif %}
+                    {% endif %}
+                    
+                {% else %}
+                    <p class="text-muted mb-4">The selected team is currently on the mission. Waiting for them to return...</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        {% for tm in room.proposed_team.all %}
+                            <span class="badge bg-dark fs-6">{{ tm.user.username }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
+        {% endif %}        
 
+
+
+        {% if room.current_phase == "TEAM_PROPOSAL" or room.current_phase == "TEAM_BUILDING" %}
+            {% if player == room.current_leader %}
+            <div class="text-center mt-5">
+                <form action="{% url 'propose_team' room.room_code %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg px-5 py-3 shadow fw-bold">PROPOSE TEAM</button>
+                </form>
+            </div>
+            {% endif %}
+        {% endif %}
     </div>
 
     <script>
@@ -312,29 +281,47 @@
             const container = document.querySelector('.table-container');
             const seats = document.querySelectorAll('.player-seat');
             if (!container || seats.length === 0) return;
-
-            const width = container.offsetWidth;
-            const height = container.offsetHeight;
-            const radius = width * 0.42; 
-
+            const radius = container.offsetWidth * 0.44; 
             seats.forEach((seat) => {
                 const index = parseInt(seat.getAttribute('data-index'));
                 const total = parseInt(seat.getAttribute('data-total'));
                 const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-                
-                seat.style.left = `${(width/2) + radius * Math.cos(angle)}px`;
-                seat.style.top = `${(height/2) + radius * Math.sin(angle)}px`;
+                seat.style.left = `${(container.offsetWidth/2) + radius * Math.cos(angle)}px`;
+                seat.style.top = `${(container.offsetHeight/2) + radius * Math.sin(angle)}px`;
             });
         }
-
+        function handleAvatarClick(playerId) {
+            const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
+            const phase = "{{ room.current_phase }}";
+            if (!isLeader || (phase !== "TEAM_PROPOSAL" && phase !== "TEAM_BUILDING")) return;
+            const avatar = document.getElementById(`avatar-${playerId}`);
+            const seat = avatar.closest('.player-seat');
+            seat.classList.toggle('on-team');
+            fetch(`/room/{{ room.room_code }}/toggle_player/${playerId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            });
+        }
         window.addEventListener('load', positionPlayers);
         window.addEventListener('resize', positionPlayers);
-        
+
+        // Replace your existing setInterval with this more careful one:
         setInterval(() => {
-            if (!document.querySelector('input[type="checkbox"]:checked')) {
-                location.reload();
+            const phase = "{{ room.current_phase }}";
+            const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
+            const isBuilding = phase === "TEAM_PROPOSAL" || phase === "TEAM_BUILDING";
+
+            // Stop all auto-refreshes if I am the leader during the proposal phase
+            // This prevents the page from reloading while you are clicking the button
+            if (isLeader && isBuilding) {
+                return; 
             }
+            
+            location.reload();
         }, 5000);
+
+
+
     </script>
 </body>
 </html>

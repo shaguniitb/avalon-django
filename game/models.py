@@ -15,7 +15,6 @@ class GameRoom(models.Model):
     host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_games')
     current_leader = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True)
 
-    # NEW FIELD: Tracks the players currently nominated for a mission
     proposed_team = models.ManyToManyField('Player', related_name='proposed_for', blank=True)
 
     score_good = models.IntegerField(default=0)
