@@ -45,38 +45,43 @@ def home(request):
     return render(request, 'game/home.html')
 
 def game_room(request, room_code):
-    # Fetch the room and ensure the current user is actually in it
     room = get_object_or_404(GameRoom, room_code=room_code)
-    
     try:
         player = Player.objects.get(user=request.user, game=room)
     except Player.DoesNotExist:
         return redirect('home')
     
     knowledge_data = get_player_knowledge(room, player)
-
     all_players = room.players.all()
-    voted_count = all_players.filter(has_voted=True).count()
-    quest_voted_count = all_players.filter(has_quest_voted=True).count()
+    num_players = all_players.count()
+    
+    # --- BUILD THE 5-SQUARE TRACK IN PYTHON ---
+    missions = {m.round_number: m for m in room.missions.all()}
+    mission_track = []
+    
+    for r in range(1, 6):
+        size = get_required_team_size(num_players, r) if num_players >= 5 else 0
+        status = 'pending'
+        
+        # Check the database for the results of this round
+        if r in missions:
+            status = 'success' if missions[r].did_succeed else 'fail'
+            
+        mission_track.append({
+            'round': r,
+            'size': size,
+            'status': status
+        })
 
-    required_team_size = get_required_team_size(all_players.count(), room.current_round)
-    
-    required_fails = 1
-    if all_players.count() >= 7 and room.current_round == 4:
-        required_fails = 2
-    
     context = {
         'room': room,
         'player': player,
         'all_players': all_players,
         'knowledge': knowledge_data["text"],
         'known_player_ids': knowledge_data["ids"],
-        'voted_count': voted_count, # Pass the count to the template
-        'quest_voted_count': quest_voted_count, 
-        'required_team_size': required_team_size, # Passed to template
-        'required_fails': required_fails,         # Passed to template
+        'mission_track': mission_track, # Pass the track to the HTML
     }
-    return render(request, 'game/room.html', context)
+    return render(request, 'game/room.html', context) # (or 'game/room.html' depending on your setup)
 
 def start_game(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
@@ -105,50 +110,38 @@ def propose_team(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
     player = get_object_or_404(Player, user=request.user, game=room)
 
-    # 1. Validation: Only the leader can propose
-    if player != room.current_leader:
-        return redirect('game_room', room_code=room_code)
+    if player == room.current_leader:
+        # Clear out the previous round's vote displays when a new team is proposed
+        for p in room.players.all():
+            p.last_vote = None
+            p.save()
 
-    # 2. Validation: Check team size (Optional but recommended)
-    current_player_count = room.players.count()
-    required_size = get_required_team_size(current_player_count, room.current_round)
-    if room.proposed_team.count() != required_size:
-        return redirect('game_room', room_code=room_code)
-
-    # 3. ADVANCE THE PHASE
-    # Make sure this matches the string your template/JavaScript expects
-    room.current_phase = "TEAM_VOTING" 
-    room.save()
+        room.current_phase = "TEAM_VOTING"
+        room.save()
 
     return redirect('game_room', room_code=room_code)
 
+@require_POST
 def cast_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
-    current_player = get_object_or_404(Player, user=request.user, game=room)
+    player = get_object_or_404(Player, user=request.user, game=room)
 
-    if request.method == "POST" and room.current_phase == 'TEAM_VOTING' and not current_player.has_voted:
-        # Get the button value ('approve' or 'reject')
-        vote_choice = request.POST.get('vote_choice')
-        
-        # Save the player's vote
-        current_player.has_voted = True
-        current_player.vote_approve = (vote_choice == 'approve')
-        current_player.save()
+    vote_choice = request.POST.get('vote_choice')
+    if vote_choice == 'approve':
+        player.vote_approve = True
+        player.last_vote = 'Approve'
+    else:
+        player.vote_approve = False
+        player.last_vote = 'Reject'
+    
+    player.has_voted = True
+    player.save()
 
-        # Check if everyone has voted!
-        total_players = room.players.count()
-        votes_cast = room.players.filter(has_voted=True).count()
-        
-        if votes_cast == total_players:
-            # Extract a simple list of booleans (True for approve, False for reject)
-            votes = list(room.players.values_list('vote_approve', flat=True))
-            
-            # Reset all players' voting status for the next round
-            room.players.update(has_voted=False, vote_approve=None)
-            
-            # Pass the votes to the logic engine we built earlier!
-            tally_team_votes(room, votes)
-            broadcast_game_update(room_code)
+    # If everyone has voted, tally them (handled by your logic.py usually)
+    if room.players.filter(has_voted=False).count() == 0:
+        votes = list(room.players.values_list('vote_approve', flat=True))
+        tally_team_votes(room, votes)
+        room.players.update(has_voted=False, vote_approve=None)
 
     return redirect('game_room', room_code=room_code)
 

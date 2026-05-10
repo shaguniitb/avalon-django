@@ -30,6 +30,7 @@ class Player(models.Model):
     vote_approve = models.BooleanField(null=True, blank=True)
     has_quest_voted = models.BooleanField(default=False)
     quest_vote_success = models.BooleanField(null=True, blank=True)
+    last_vote = models.CharField(max_length=10, null=True, blank=True)
 
 class Mission(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='missions')
@@ -40,3 +41,4 @@ class Mission(models.Model):
     # Outcomes
     is_completed = models.BooleanField(default=False)
     did_succeed = models.BooleanField(null=True)
+    fails_count = models.IntegerField(default=0)
