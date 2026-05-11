@@ -164,7 +164,7 @@
 </head>
 <body class="py-4 phase-{{ room.current_phase }}">
 
-    <div style="text-align: right; margin-bottom: 20px;">
+    <div style="text-align: right; margin-bottom: 20px; margin-right: 100px;">
         Logged in as <strong>{{ user.username }}</strong> | 
         <form action="{% url 'logout' %}" method="POST" style="display: inline;">
             {% csrf_token %}
@@ -793,6 +793,26 @@
             (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }, 1000);
 
+    const roomCode = "{{ room.room_code }}";
+    // Check if we are using http:// or https:// to select ws:// or wss://
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const wsPath = wsScheme + '://' + window.location.host + '/ws/room/' + roomCode + '/';
+
+    const gameSocket = new WebSocket(wsPath);
+
+    // Listen for messages from the server (your GameRoomConsumer)
+    gameSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'game_update') {
+            console.log("Update received! Reloading...");
+            // The server state changed. Refresh to get the new HTML.
+            window.location.reload();
+        }
+    };
+
+    gameSocket.onclose = function(e) {
+        console.error('Game socket closed unexpectedly. You might need to manually refresh.');
+    };
 
 </script>
 </body>

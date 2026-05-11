@@ -2,7 +2,7 @@
 <html>
 <head><title>Play Avalon</title></head>
 <body>
-    <div style="text-align: right; margin-bottom: 20px;">
+    <div style="text-align: right; margin-bottom: 20px; margin-right: 100px;">
         Logged in as <strong>{{ user.username }}</strong> | 
         <form action="{% url 'logout' %}" method="POST" style="display: inline;">
             {% csrf_token %}

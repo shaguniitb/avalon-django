@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "channels",
-
     "game",
 ]
 
@@ -70,7 +69,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "avalon_project.wsgi.application"
+# WSGI_APPLICATION = "avalon_project.wsgi.application"
+ASGI_APPLICATION = 'whimsy.asgi.application' # change 'whimsy' to your project folder's name
 
 
 # Database
