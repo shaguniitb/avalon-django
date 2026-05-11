@@ -10,6 +10,32 @@
     <style>
         body { background-color: #ffffff; color: #212529; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
         
+        /* VOTING HISTORY TABLE */
+        .history-table-wrapper { overflow-x: auto; max-width: 900px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: #fff; border: 3px solid #000; } /* Thick outer border */
+        .history-table th, .history-table td { border: 1px solid #000; padding: 6px 10px; text-align: center; vertical-align: middle; } /* Black cell borders */
+        .history-table th { background-color: #f8f9fa; font-weight: bold; }
+        .history-table thead { border-bottom: 3px solid #000; } /* Thick border under headers */
+        .history-table .player-name { text-align: left; font-weight: 700; white-space: nowrap; border-right: 3px solid #000; } /* Thick border separating names */
+        
+        .cell-on-team { background-color: #8ae2a3 !important; } /* Vibrant Mint Green */
+        .cell-off-team { background-color: #ff9e9e !important; } /* Strong Coral Red */
+        
+        .vote-approve { 
+            color: #004d1a !important; /* Deep Forest Green */
+            font-size: 1.5rem; 
+            font-weight: 900; 
+            -webkit-text-stroke: 1.5px #004d1a;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8); /* White outline for contrast */
+        }
+        .vote-reject { 
+            color: #7a0000 !important; /* Deep Crimson Red */
+            font-size: 1.4rem; 
+            font-weight: 900; 
+            -webkit-text-stroke: 1.5px #7a0000;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
         .table-container { 
             width: 100%; max-width: 850px; height: 500px; 
             margin: 40px auto 60px auto; position: relative; 
@@ -423,6 +449,53 @@
         {% endif %}
 
     </div>
+
+    {% if history_headers %}
+    <div class="container mt-2 mb-5">
+        <h5 class="fw-bold mb-3 text-center border-bottom pb-2" style="max-width: 900px; margin: 0 auto;">Voting History</h5>
+        <div class="history-table-wrapper">
+            <table class="history-table">
+                <colgroup>
+                    <col> </colgroup>
+                {% for h in history_headers %}
+                    <colgroup span="{{ h.colspan }}" style="border-right: 3px solid #000;"></colgroup>
+                {% endfor %}
+                
+                <thead>
+                    <tr>
+                        <th rowspan="2" class="player-name align-middle">Player</th>
+                        {% for h in history_headers %}
+                            <th colspan="{{ h.colspan }}">Mission {{ h.round }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for attempt in attempt_numbers %}
+                            <th style="font-size: 0.75rem; color: #6c757d;">#{{ attempt }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ph in player_history %}
+                    <tr>
+                        <td class="player-name">{{ ph.player.user.username }}</td>
+                        {% for v in ph.votes %}
+                        <td class="{% if v.on_team %}cell-on-team{% else %}cell-off-team{% endif %}">
+                            {% if v.vote == 'approve' %}
+                                <i class="bi bi-check-lg vote-approve"></i>
+                            {% elif v.vote == 'reject' %}
+                                <i class="bi bi-x-lg vote-reject"></i>
+                            {% else %}
+                                <span style="color: #6c757d; font-weight: bold;">-</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     <script>
         if ("{{ room.current_phase }}" === "QUESTING") {

@@ -42,3 +42,10 @@ class Mission(models.Model):
     is_completed = models.BooleanField(default=False)
     did_succeed = models.BooleanField(null=True)
     fails_count = models.IntegerField(default=0)
+
+class TeamProposal(models.Model):
+    game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='history_proposals')
+    round_number = models.IntegerField()
+    team = models.ManyToManyField('Player', related_name='history_team')
+    approves = models.ManyToManyField('Player', related_name='history_approves')
+    rejects = models.ManyToManyField('Player', related_name='history_rejects')

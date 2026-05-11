@@ -1,6 +1,6 @@
 # game/logic.py
 import random
-from .models import GameRoom, Player, Mission
+from .models import GameRoom, Player, Mission, TeamProposal
 
 # Dictionary defining (Good, Evil) counts based on total players
 AVALON_DISTRIBUTION = {
@@ -86,6 +86,14 @@ def start_game_and_assign_roles(game_room, special_roles=None):
     return True
 
 def tally_team_votes(game_room, votes):
+    proposal = TeamProposal.objects.create(
+        game=game_room,
+        round_number=game_room.current_round
+    )
+    proposal.team.set(game_room.proposed_team.all())
+    proposal.approves.set(game_room.players.filter(last_vote='Approve'))
+    proposal.rejects.set(game_room.players.filter(last_vote='Reject'))
+
     approves = votes.count(True)
     rejects = votes.count(False)
     

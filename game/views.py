@@ -82,6 +82,47 @@ def game_room(request, room_code):
         # Calculate who will make the 5th proposal (loops around the table using modulo)
         hammer_seat = (current_seat + (4 - failed_votes) - 1) % num_players + 1
         hammer_player = all_players.filter(seat_order=hammer_seat).first()
+
+    proposals = room.history_proposals.all().order_by('id')
+    history_headers = []
+    attempt_numbers = []
+    player_history = []
+
+    if proposals.exists():
+        # 1. Build the dynamic headers with colspan
+        current_round = None
+        count = 0
+        attempt = 1
+        for prop in proposals:
+            if prop.round_number != current_round:
+                if current_round is not None:
+                    history_headers.append({'round': current_round, 'colspan': count})
+                current_round = prop.round_number
+                count = 1
+                attempt = 1
+            else:
+                count += 1
+                attempt += 1
+            attempt_numbers.append(attempt)
+            
+        if current_round is not None:
+            history_headers.append({'round': current_round, 'colspan': count})
+            
+        # 2. Build each player's row data
+        for p in all_players:
+            p_votes = []
+            for prop in proposals:
+                on_team = prop.team.filter(id=p.id).exists()
+                if prop.approves.filter(id=p.id).exists():
+                    vote = 'approve'
+                elif prop.rejects.filter(id=p.id).exists():
+                    vote = 'reject'
+                else:
+                    vote = 'none'
+                    
+                p_votes.append({'on_team': on_team, 'vote': vote})
+                
+            player_history.append({'player': p, 'votes': p_votes})
         
 
     context = {
@@ -92,6 +133,9 @@ def game_room(request, room_code):
         'known_player_ids': knowledge_data["ids"],
         'mission_track': mission_track, 
         'hammer_player': hammer_player,   
+        'history_headers': history_headers,
+        'attempt_numbers': attempt_numbers,
+        'player_history': player_history,
     }
     return render(request, 'game/room.html', context) # (or 'game/room.html' depending on your setup)
 
