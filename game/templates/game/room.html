@@ -155,6 +155,11 @@
         }
         .status-text { font-size: 1.15rem; font-weight: 600; color: #343a40; margin: 0; }
         .text-reveal { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #6c757d; }
+        .text-danger.fw-bold {
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            letter-spacing: 0.5px;
+        }        
     </style>
 </head>
 <body class="py-4 phase-{{ room.current_phase }}">
@@ -481,7 +486,14 @@
                 {% elif room.current_phase == 'GOOD_WINS' %}
                     <h3 class="text-primary fw-bold m-0">GOOD WINS!</h3>
                 {% elif room.current_phase == 'EVIL_WINS' %}
-                    <h3 class="text-danger fw-bold m-0">EVIL WINS!</h3>
+                    <div class="text-center">
+                        <h3 class="text-danger fw-bold m-0">EVIL WINS!</h3>
+                        {% if room.victory_reason == 'MERLIN_KILLED' %}
+                            <p class="text-danger fw-bold mt-2">Congrats, you killed Merlin!</p>
+                        {% elif room.victory_reason == 'LOVERS_KILLED' %}
+                            <p class="text-danger fw-bold mt-2">Congrats, you killed the Lovers!</p>
+                        {% endif %}
+                    </div>
                 {% else %}
                     <p class="status-text">Waiting for game to advance...</p>
                 {% endif %}
@@ -536,6 +548,28 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <div class="table-legend d-flex justify-content-center gap-4 mt-2">
+                <div class="d-flex align-items-center gap-1">
+                    <div style="width: 12px; height: 12px; background-color: #8ae2a3; border: 1px solid #000;"></div>
+                    <span>On Team</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <div style="width: 12px; height: 12px; background-color: #ff9e9e; border: 1px solid #000;"></div>
+                    <span>Off Team</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <i class="bi bi-check-lg" style="color: #004d1a; font-weight: 900;"></i>
+                    <span>Approved</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <span style="width: 12px; text-align: center;">&nbsp;</span>
+                    <span class="text-muted">Empty = Rejected</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <span style="font-size: 0.8rem;">👑</span>
+                    <span>Proposer</span>
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}

@@ -204,6 +204,7 @@ def attempt_assassination(game_room, target_player_ids):
     if len(targets) == 1:
         if targets.first().role == 'Merlin':
             game_room.current_phase = 'EVIL_WINS'
+            game_room.victory_reason = 'MERLIN_KILLED'
         else:
             game_room.current_phase = 'GOOD_WINS'
             
@@ -212,6 +213,7 @@ def attempt_assassination(game_room, target_player_ids):
         roles = [t.role for t in targets]
         if roles.count('Lover') == 2:
             game_room.current_phase = 'EVIL_WINS'
+            game_room.victory_reason = 'LOVERS_KILLED'
         else:
             game_room.current_phase = 'GOOD_WINS'    
     

@@ -19,6 +19,7 @@ class GameRoom(models.Model):
 
     score_good = models.IntegerField(default=0)
     score_evil = models.IntegerField(default=0)
+    victory_reason = models.CharField(max_length=50, null=True, blank=True)
 
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
