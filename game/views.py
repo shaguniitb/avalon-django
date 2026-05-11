@@ -52,7 +52,7 @@ def game_room(request, room_code):
         return redirect('home')
     
     knowledge_data = get_player_knowledge(room, player)
-    all_players = room.players.all()
+    all_players = room.players.all().order_by('seat_order', 'id')
     num_players = all_players.count()
     
     # --- BUILD THE 5-SQUARE TRACK IN PYTHON ---
@@ -73,13 +73,25 @@ def game_room(request, room_code):
             'status': status
         })
 
+# --- CALCULATE THE HAMMER PLAYER ---
+    hammer_player_id = None
+    if room.current_phase != 'LOBBY' and room.current_leader and num_players > 0:
+        current_seat = room.current_leader.seat_order
+        failed_votes = room.failed_votes
+        
+        # Calculate who will make the 5th proposal (loops around the table using modulo)
+        hammer_seat = (current_seat + (4 - failed_votes) - 1) % num_players + 1
+        hammer_player = all_players.filter(seat_order=hammer_seat).first()
+        
+
     context = {
         'room': room,
         'player': player,
         'all_players': all_players,
         'knowledge': knowledge_data["text"],
         'known_player_ids': knowledge_data["ids"],
-        'mission_track': mission_track, # Pass the track to the HTML
+        'mission_track': mission_track, 
+        'hammer_player': hammer_player,   
     }
     return render(request, 'game/room.html', context) # (or 'game/room.html' depending on your setup)
 

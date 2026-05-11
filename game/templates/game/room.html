@@ -10,10 +10,9 @@
     <style>
         body { background-color: #ffffff; color: #212529; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
         
-        /* OVAL TABLE CONTAINER */
         .table-container { 
-            width: 100%; max-width: 850px; height: 400px; 
-            margin: 40px auto 20px auto; position: relative; 
+            width: 100%; max-width: 850px; height: 500px; 
+            margin: 40px auto 60px auto; position: relative; 
         }
         
         #center-info {
@@ -26,32 +25,30 @@
             font-size: 1.4rem; font-weight: bold; border-radius: 8px; transition: all 0.3s;
         }
 
+        .mission-square.active-mission {
+            border-color: #ffc107 !important; border-width: 3px !important;
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.9); transform: scale(1.15); z-index: 5;
+        }
+
         .player-seat { position: absolute; z-index: 10; transition: all 0.4s ease; }
         
         .player-avatar { 
             position: relative; cursor: pointer; text-align: center;
-            padding: 10px 10px 0 10px; /* Changed: Removed bottom padding */
-            border-radius: 8px; transition: all 0.2s ease;
+            padding: 10px 10px 0 10px; border-radius: 8px; transition: all 0.2s ease;
             background-color: transparent;
         }
-
-        /* STRICT YELLOW SELECTOR - Forcibly removes yellow outside of building/voting phases */
+        
         body.phase-TEAM_BUILDING .player-seat.on-team .player-avatar,
         body.phase-TEAM_PROPOSAL .player-seat.on-team .player-avatar,
         body.phase-TEAM_VOTING .player-seat.on-team .player-avatar {
-            background-color: #ffe066 !important; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            background-color: #ffe066 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         }
 
-        /* Ensures yellow is erased during QUESTING */
         body.phase-QUESTING .player-seat.on-team .player-avatar {
-            background-color: transparent !important;
-            box-shadow: none !important;
+            background-color: transparent !important; box-shadow: none !important;
         }
 
-        .toy-icon {
-            font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)); transition: all 0.2s ease;
-        }
+        .toy-icon { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)); transition: all 0.2s ease; }
         
         body.phase-TEAM_BUILDING .player-seat.on-team .toy-icon,
         body.phase-TEAM_PROPOSAL .player-seat.on-team .toy-icon,
@@ -66,16 +63,16 @@
         .on-team .shield-overlay { opacity: 1; }
         
         .crown-icon { position: absolute; top: -10px; left: -10px; transform: rotate(-35deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
+        
+        /* NEW HAMMER ICON CSS */
+        .hammer-icon { position: absolute; top: -10px; right: -10px; transform: rotate(15deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
 
         .percival-vision::after { 
             content: "?"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             font-size: 3.5rem; font-weight: 900; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none;
         }
 
-        .username-container { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            margin-top: -5px; /* Changed: Uses a slight negative margin to pull the text up */
-        }
+        .username-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -5px; }
         .username-text { font-weight: 800; font-size: 1rem; color: #212529; background: rgba(255,255,255,0.9); padding: 0 6px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
         .secret-role-text { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
         
@@ -116,46 +113,71 @@
                     {% else %}{{ room.current_phase }}{% endif %}
                 </span>
                 
-                <div class="d-flex justify-content-center gap-2">
+                <div class="d-flex justify-content-center gap-3">
                     
-                    <div class="mission-square bg-white text-dark" style="border: 2px solid #6c757d; 
-                        {% for m in room.missions.all %}{% if m.round_number == 1 %}
-                            {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                            {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
-                        {% endif %}{% endfor %}">
-                        {% if all_players.count < 8 %}2{% else %}3{% endif %}
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="mission-square bg-white text-dark {% if room.current_round == 1 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
+                            {% for m in room.missions.all %}{% if m.round_number == 1 %}
+                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                            {% endif %}{% endfor %}">
+                            {% if all_players.count < 8 %}2{% else %}3{% endif %}
+                        </div>
+                        <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
+                            {% for m in room.missions.all %}{% if m.round_number == 1 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                        </div>
                     </div>
                     
-                    <div class="mission-square bg-white text-dark" style="border: 2px solid #6c757d; 
-                        {% for m in room.missions.all %}{% if m.round_number == 2 %}
-                            {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                            {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
-                        {% endif %}{% endfor %}">
-                        {% if all_players.count < 8 %}3{% else %}4{% endif %}
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="mission-square bg-white text-dark {% if room.current_round == 2 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
+                            {% for m in room.missions.all %}{% if m.round_number == 2 %}
+                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                            {% endif %}{% endfor %}">
+                            {% if all_players.count < 8 %}3{% else %}4{% endif %}
+                        </div>
+                        <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
+                            {% for m in room.missions.all %}{% if m.round_number == 2 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                        </div>
                     </div>
 
-                    <div class="mission-square bg-white text-dark" style="border: 2px solid #6c757d; 
-                        {% for m in room.missions.all %}{% if m.round_number == 3 %}
-                            {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                            {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
-                        {% endif %}{% endfor %}">
-                        {% if all_players.count == 5 %}2{% elif all_players.count == 7 %}3{% else %}4{% endif %}
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="mission-square bg-white text-dark {% if room.current_round == 3 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
+                            {% for m in room.missions.all %}{% if m.round_number == 3 %}
+                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                            {% endif %}{% endfor %}">
+                            {% if all_players.count == 5 %}2{% elif all_players.count == 7 %}3{% else %}4{% endif %}
+                        </div>
+                        <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
+                            {% for m in room.missions.all %}{% if m.round_number == 3 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                        </div>
                     </div>
 
-                    <div class="mission-square bg-white text-dark" style="border: 2px solid #6c757d; 
-                        {% for m in room.missions.all %}{% if m.round_number == 4 %}
-                            {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                            {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
-                        {% endif %}{% endfor %}">
-                        {% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="mission-square bg-white text-dark {% if room.current_round == 4 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
+                            {% for m in room.missions.all %}{% if m.round_number == 4 %}
+                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                            {% endif %}{% endfor %}">
+                            {% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
+                        </div>
+                        <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
+                            {% for m in room.missions.all %}{% if m.round_number == 4 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                        </div>
                     </div>
 
-                    <div class="mission-square bg-white text-dark" style="border: 2px solid #6c757d; 
-                        {% for m in room.missions.all %}{% if m.round_number == 5 %}
-                            {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                            {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
-                        {% endif %}{% endfor %}">
-                        {% if all_players.count == 5 %}3{% elif all_players.count < 8 %}4{% else %}5{% endif %}
+                    <div class="d-flex flex-column align-items-center">
+                        <div class="mission-square bg-white text-dark {% if room.current_round == 5 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
+                            {% for m in room.missions.all %}{% if m.round_number == 5 %}
+                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                            {% endif %}{% endfor %}">
+                            {% if all_players.count == 5 %}3{% elif all_players.count < 8 %}4{% else %}5{% endif %}
+                        </div>
+                        <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
+                            {% for m in room.missions.all %}{% if m.round_number == 5 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                        </div>
                     </div>
 
                 </div>
@@ -167,6 +189,7 @@
                     
                     <div class="d-flex flex-column align-items-center">
                         {% if p == room.current_leader %}<span class="crown-icon">👑</span>{% endif %}
+                        {% if p == hammer_player %}<span class="hammer-icon">🔨</span>{% endif %}
                         
                         <div class="player-avatar {% if p.id in known_player_ids and player.role == 'Percival' %}percival-vision{% endif %}"
                              onclick="handleAvatarClick('{{ p.id }}')" id="avatar-{{ p.id }}">
@@ -363,7 +386,6 @@
             });
         }
         
-        // Mathematical check in Javascript to enable/disable the OK button
         function updateProposeButton() {
             const btn = document.getElementById('propose-team-btn');
             if (btn) {
@@ -391,7 +413,6 @@
             const seat = avatar.closest('.player-seat');
             seat.classList.toggle('on-team');
             
-            // Check immediately after toggling if the required count is met
             updateProposeButton();
             
             fetch(`/room/{{ room.room_code }}/toggle_player/${playerId}/`, {
@@ -400,7 +421,6 @@
             });
         }
 
-        // Action when OK is clicked: Switched to classList approach
         function showQuestAction() {
             const step1 = document.getElementById('quest-approval-step');
             const step2 = document.getElementById('quest-action-step');

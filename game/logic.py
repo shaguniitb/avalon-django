@@ -102,6 +102,7 @@ def tally_team_votes(game_room, votes):
             
             game_room.current_leader = next_leader
             game_room.current_phase = 'TEAM_BUILDING'
+            game_room.proposed_team.clear()
             
     game_room.save()
 
