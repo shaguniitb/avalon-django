@@ -88,7 +88,8 @@ def start_game_and_assign_roles(game_room, special_roles=None):
 def tally_team_votes(game_room, votes):
     proposal = TeamProposal.objects.create(
         game=game_room,
-        round_number=game_room.current_round
+        round_number=game_room.current_round,
+        leader=game_room.current_leader,
     )
     proposal.team.set(game_room.proposed_team.all())
     proposal.approves.set(game_room.players.filter(last_vote='Approve'))

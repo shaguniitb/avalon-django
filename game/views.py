@@ -119,8 +119,9 @@ def game_room(request, room_code):
                     vote = 'reject'
                 else:
                     vote = 'none'
-                    
-                p_votes.append({'on_team': on_team, 'vote': vote})
+
+                is_leader = (prop.leader == p) if prop.leader else False
+                p_votes.append({'on_team': on_team, 'vote': vote, 'is_leader': is_leader})
                 
             player_history.append({'player': p, 'votes': p_votes})
         

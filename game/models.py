@@ -46,6 +46,7 @@ class Mission(models.Model):
 class TeamProposal(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='history_proposals')
     round_number = models.IntegerField()
+    leader = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True, related_name='history_led')
     team = models.ManyToManyField('Player', related_name='history_team')
     approves = models.ManyToManyField('Player', related_name='history_approves')
     rejects = models.ManyToManyField('Player', related_name='history_rejects')

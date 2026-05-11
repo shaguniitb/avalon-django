@@ -10,29 +10,62 @@
     <style>
         body { background-color: #ffffff; color: #212529; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
         
-        /* VOTING HISTORY TABLE */
-        .history-table-wrapper { overflow-x: auto; max-width: 900px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
-        .history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: #fff; border: 3px solid #000; } /* Thick outer border */
-        .history-table th, .history-table td { border: 1px solid #000; padding: 6px 10px; text-align: center; vertical-align: middle; } /* Black cell borders */
-        .history-table th { background-color: #f8f9fa; font-weight: bold; }
-        .history-table thead { border-bottom: 3px solid #000; } /* Thick border under headers */
-        .history-table .player-name { text-align: left; font-weight: 700; white-space: nowrap; border-right: 3px solid #000; } /* Thick border separating names */
+/* VOTING HISTORY TABLE (80% Scale) */
+        .history-table-wrapper { 
+            overflow-x: auto; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+            padding-bottom: 10px; 
+        }
         
-        .cell-on-team { background-color: #8ae2a3 !important; } /* Vibrant Mint Green */
-        .cell-off-team { background-color: #ff9e9e !important; } /* Strong Coral Red */
+        .history-table { 
+            width: max-content;
+            margin: 0 auto;
+            border-collapse: collapse; 
+            /* Add 'ui-monospace' and 'monospace' to the font stack */
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.68rem;
+            background: #fff; 
+            border: 2.5px solid #000; 
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-weight: 500;
+        }        
+        
+        .history-table th, .history-table td { 
+            border: 1px solid #000; 
+            padding: 5px 8px; /* 80% of 6px 10px */
+            text-align: center; 
+            vertical-align: middle; 
+        }
+        
+        .history-table th { background-color: #f8f9fa; font-weight: bold; }
+        .history-table thead { border-bottom: 2.5px solid #000; }
+        .history-table .player-name { 
+            text-align: left; 
+            font-weight: 700; 
+            white-space: nowrap; 
+            border-right: 2.5px solid #000; 
+        }
+        
+        .cell-on-team { background-color: #8ae2a3 !important; }
+        .cell-off-team { background-color: #ff9e9e !important; }
         
         .vote-approve { 
-            color: #004d1a !important; /* Deep Forest Green */
-            font-size: 1.5rem; 
+            color: #004d1a !important; 
+            font-size: 1.2rem; /* 80% of 1.5rem */
             font-weight: 900; 
-            -webkit-text-stroke: 1.5px #004d1a;
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8); /* White outline for contrast */
+            -webkit-text-stroke: 1.2px #004d1a; 
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8); 
         }
+        
         .vote-reject { 
-            color: #7a0000 !important; /* Deep Crimson Red */
-            font-size: 1.4rem; 
+            color: #7a0000 !important; 
+            font-size: 1.1rem; /* 80% of 1.4rem */
             font-weight: 900; 
-            -webkit-text-stroke: 1.5px #7a0000;
+            -webkit-text-stroke: 1.2px #7a0000; 
             text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
         }
 
@@ -121,6 +154,7 @@
             display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 15px;
         }
         .status-text { font-size: 1.15rem; font-weight: 600; color: #343a40; margin: 0; }
+        .text-reveal { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #6c757d; }
     </style>
 </head>
 <body class="py-4 phase-{{ room.current_phase }}">
@@ -250,7 +284,12 @@
 
                         <div class="username-container">
                             <div class="username-text">{{ p.user.username }}</div>
-                            {% if p == player and room.current_phase != 'LOBBY' %}
+
+                            {% if room.current_phase == 'EVIL_WINS' or room.current_phase == 'GOOD_WINS' %}
+                                <div class="secret-role-text {% if p.is_good %}text-primary{% else %}text-danger{% endif %}">
+                                    {{ p.role }}
+                                </div>                            
+                            {% elif p == player and room.current_phase != 'LOBBY' %}
                                 <div class="secret-role-text {% if p.is_good %}text-primary{% else %}text-danger{% endif %}">{{ player.role }}</div>
                             {% endif %}
                             
@@ -358,7 +397,8 @@
                             const unvoted = [{% for p in all_players %}{% if not p.has_voted %}"{{ p.user.username }}",{% endif %}{% endfor %}];
                             let uText = unvoted.join(" and ");
                             if(unvoted.length > 2) uText = unvoted.slice(0, -1).join(", ") + " and " + unvoted[unvoted.length - 1];
-                            document.getElementById('unvoted-players-text').innerText = uText + " are voting on the mission team";
+                            let verb = (unvoted.length === 1) ? "is" : "are";
+                            document.getElementById('unvoted-players-text').innerText = uText + " " + verb + " voting on the mission team";
                         </script>
                     {% endif %}
                 
@@ -458,7 +498,7 @@
                 <colgroup>
                     <col> </colgroup>
                 {% for h in history_headers %}
-                    <colgroup span="{{ h.colspan }}" style="border-right: 3px solid #000;"></colgroup>
+                    <colgroup span="{{ h.colspan }}" style="border-right: 2.5px solid #000;"></colgroup>
                 {% endfor %}
                 
                 <thead>
@@ -479,13 +519,16 @@
                     <tr>
                         <td class="player-name">{{ ph.player.user.username }}</td>
                         {% for v in ph.votes %}
-                        <td class="{% if v.on_team %}cell-on-team{% else %}cell-off-team{% endif %}">
+                        <td class="position-relative {% if v.on_team %}cell-on-team{% else %}cell-off-team{% endif %}">
+
+                            {% if v.is_leader %}
+                                <div style="position: absolute; top: -2px; left: 2px; font-size: 0.7rem; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 4px rgba(255,255,255,0.8);" title="Proposed this team">👑</div>
+                            {% endif %}
+                            
                             {% if v.vote == 'approve' %}
                                 <i class="bi bi-check-lg vote-approve"></i>
-                            {% elif v.vote == 'reject' %}
-                                <i class="bi bi-x-lg vote-reject"></i>
                             {% else %}
-                                <span style="color: #6c757d; font-weight: bold;">-</span>
+                                &nbsp;
                             {% endif %}
                         </td>
                         {% endfor %}
