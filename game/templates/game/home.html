@@ -2,12 +2,16 @@
 <html>
 <head><title>Play Avalon</title></head>
 <body>
+    <div style="text-align: right; margin-bottom: 20px;">
+        Logged in as <strong>{{ user.username }}</strong> | 
+        <form action="{% url 'logout' %}" method="POST" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" style="background: none; border: none; color: blue; text-decoration: underline; cursor: pointer; padding: 0; font: inherit;">Log Out</button>
+        </form>
+    </div>    
     <h1>Join an Avalon Game</h1>
     <form method="POST">
-        {% csrf_token %}
-        <label>Username:</label>
-        <input type="text" name="username" required><br><br>
-        
+        {% csrf_token %}        
         <label>Room Code:</label>
         <input type="text" name="room_code" required maxlength="6"><br><br>
         

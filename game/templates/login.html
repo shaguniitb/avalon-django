@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><title>Login - Avalon</title></head>
+<body>
+    <h1>Sign In to Play Avalon</h1>
+    
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }} 
+        <button type="submit">Login</button>
+    </form>
+    
+    <br>
+    <p>Don't have an account? <a href="{% url 'register' %}">Sign up here</a>.</p>
+</body>
+</html>

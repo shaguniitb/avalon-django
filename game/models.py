@@ -22,6 +22,46 @@ class GameRoom(models.Model):
     victory_reason = models.CharField(max_length=50, null=True, blank=True)
     assassination_start_time = models.DateTimeField(null=True, blank=True)
 
+    @property
+    def hammer_player(self):
+        """Calculates and returns the player who holds the hammer for the 5th vote."""
+        if self.current_phase == 'LOBBY' or not self.current_leader:
+            return None
+            
+        num_players = self.players.count()
+        if num_players == 0:
+            return None
+
+        current_seat = self.current_leader.seat_order
+        
+        # Calculate who will make the 5th proposal (loops around the table)
+        hammer_seat = (current_seat + (4 - self.failed_votes) - 1) % num_players + 1
+        return self.players.filter(seat_order=hammer_seat).first()
+
+    @property
+    def mission_track(self):
+        """Builds the 5-square mission track status for the UI."""       
+        from .logic import get_required_team_size          
+        num_players = self.players.count()
+        missions = {m.round_number: m for m in self.missions.all()}
+        track = []
+        
+        for r in range(1, 6):
+            size = get_required_team_size(num_players, r) if num_players >= 5 else 0
+            status = 'pending'
+            
+            # Check the database for the results of this round
+            if r in missions:
+                status = 'success' if missions[r].did_succeed else 'fail'
+                
+            track.append({
+                'round': r,
+                'size': size,
+                'status': status
+            })
+            
+        return track    
+
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='players')

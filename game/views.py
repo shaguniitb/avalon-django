@@ -1,15 +1,33 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth import login
-from .models import GameRoom, Player
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login as auth_login
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-
-from django.contrib import messages
+from django.db import transaction
+from .models import GameRoom, Player
 from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+
+def register(request):
+    # If the user is already logged in, redirect them to the home page
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)  # Automatically log them in after signing up
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+        
+    return render(request, 'register.html', {'form': form})
 
 def broadcast_game_update(room_code):
     channel_layer = get_channel_layer()
@@ -21,29 +39,29 @@ def broadcast_game_update(room_code):
     )
 
 
+@login_required
 def home(request):
     if request.method == "POST":
-        username = request.POST.get("username")
-        room_code = request.POST.get("room_code").upper()
-        
-        # For simplicity right now, we will auto-create and log in the user
-        user, created = User.objects.get_or_create(username=username)
-        login(request, user)
+        room_code = request.POST.get("room_code").upper().strip()
+        user = request.user        
         
         # Get or create the room
         room, room_created = GameRoom.objects.get_or_create(
             room_code=room_code, 
             defaults={'host': user} # Only sets the host if creating a new room
         )
-            
-        # Add the player to the game
-        Player.objects.get_or_create(user=user, game=room)
-        
+
+        # Security: Prevent them from joining twice in different browsers
+        existing_player = Player.objects.filter(user=user, game=room).first()
+        if not existing_player:
+            Player.objects.create(user=user, game=room)
+                    
         # Send them to the game room URL
         return redirect('game_room', room_code=room_code)
         
     return render(request, 'game/home.html')
 
+@login_required
 def game_room(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
     try:
@@ -53,35 +71,6 @@ def game_room(request, room_code):
     
     knowledge_data = get_player_knowledge(room, player)
     all_players = room.players.all().order_by('seat_order', 'id')
-    num_players = all_players.count()
-    
-    # --- BUILD THE 5-SQUARE TRACK IN PYTHON ---
-    missions = {m.round_number: m for m in room.missions.all()}
-    mission_track = []
-    
-    for r in range(1, 6):
-        size = get_required_team_size(num_players, r) if num_players >= 5 else 0
-        status = 'pending'
-        
-        # Check the database for the results of this round
-        if r in missions:
-            status = 'success' if missions[r].did_succeed else 'fail'
-            
-        mission_track.append({
-            'round': r,
-            'size': size,
-            'status': status
-        })
-
-# --- CALCULATE THE HAMMER PLAYER ---
-    hammer_player = None
-    if room.current_phase != 'LOBBY' and room.current_leader and num_players > 0:
-        current_seat = room.current_leader.seat_order
-        failed_votes = room.failed_votes
-        
-        # Calculate who will make the 5th proposal (loops around the table using modulo)
-        hammer_seat = (current_seat + (4 - failed_votes) - 1) % num_players + 1
-        hammer_player = all_players.filter(seat_order=hammer_seat).first()
 
     proposals = room.history_proposals.all().order_by('id')
     history_headers = []
@@ -132,8 +121,8 @@ def game_room(request, room_code):
         'all_players': all_players,
         'knowledge': knowledge_data["text"],
         'known_player_ids': knowledge_data["ids"],
-        'mission_track': mission_track, 
-        'hammer_player': hammer_player,   
+        'mission_track': room.mission_track, 
+        'hammer_player': room.hammer_player,   
         'history_headers': history_headers,
         'attempt_numbers': attempt_numbers,
         'player_history': player_history,
@@ -181,56 +170,82 @@ def propose_team(request, room_code):
 @require_POST
 def cast_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
-    player = get_object_or_404(Player, user=request.user, game=room)
 
-    vote_choice = request.POST.get('vote_choice')
-    if vote_choice == 'approve':
-        player.vote_approve = True
-        player.last_vote = 'Approve'
-    else:
-        player.vote_approve = False
-        player.last_vote = 'Reject'
-    
-    player.has_voted = True
-    player.save()
+    with transaction.atomic():
+        # Lock this specific room row for the duration of this transaction
+        locked_room = GameRoom.objects.select_for_update().get(id=room.id)
+        player = get_object_or_404(Player, user=request.user, game=locked_room)
 
-    # If everyone has voted, tally them (handled by your logic.py usually)
-    if room.players.filter(has_voted=False).count() == 0:
-        votes = list(room.players.values_list('vote_approve', flat=True))
-        tally_team_votes(room, votes)
-        room.players.update(has_voted=False, vote_approve=None)
+        # Prevent a player from double-voting if they spam the button
+        if player.has_voted:
+            return redirect('game_room', room_code=room_code)        
+        
+        vote_choice = request.POST.get('vote_choice')
+        if vote_choice == 'approve':
+            player.vote_approve = True
+            player.last_vote = 'Approve'
+        else:
+            player.vote_approve = False
+            player.last_vote = 'Reject'
+
+        player.has_voted = True
+        player.save()
+
+        # Check if everyone has voted using the LOCKED room state
+        if locked_room.players.filter(has_voted=False).count() == 0:
+            votes = list(locked_room.players.values_list('vote_approve', flat=True))
+            tally_team_votes(locked_room, votes)
+
+            # Reset votes for the next round
+            locked_room.players.update(has_voted=False, vote_approve=None)
+
+            # Broadcast the update so everyone sees the results at once
+            broadcast_game_update(room_code)            
 
     return redirect('game_room', room_code=room_code)
 
+@require_POST
 def cast_quest_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
-    current_player = get_object_or_404(Player, user=request.user, game=room)
+    
+    with transaction.atomic():
+        # Lock the room row
+        locked_room = GameRoom.objects.select_for_update().get(id=room.id)
+        current_player = get_object_or_404(Player, user=request.user, game=locked_room)
 
-    if request.method == "POST" and room.current_phase == 'QUESTING' and not current_player.has_quest_voted:
-        
-        # Security check: Make sure this player is actually on the mission!
-        if current_player in room.proposed_team.all():
-            vote_choice = request.POST.get('quest_vote')
+        # Verify phase and ensure they haven't already voted
+        if locked_room.current_phase == 'QUESTING' and not current_player.has_quest_voted:
             
-            # Save the vote
-            current_player.has_quest_voted = True
-            current_player.quest_vote_success = (vote_choice == 'success')
-            current_player.save()
+            # Security check: Make sure this player is actually on the mission!
+            if current_player in locked_room.proposed_team.all():
+                vote_choice = request.POST.get('quest_vote')
+                current_player.has_quest_voted = True
 
-            # Check if all team members have voted
-            team_size = room.proposed_team.count()
-            votes_cast = room.players.filter(has_quest_voted=True).count()
-            
-            if votes_cast == team_size:
-                # Extract the boolean votes
-                votes = list(room.players.filter(has_quest_voted=True).values_list('quest_vote_success', flat=True))
+                # Good players MUST vote success. Only evil players can vote fail.
+                if current_player.is_good:
+                    current_player.quest_vote_success = True
+                else:
+                    current_player.quest_vote_success = (vote_choice == 'success')
                 
-                # Reset quest voting status for the future
-                room.players.update(has_quest_voted=False, quest_vote_success=None)
+                # Save the vote
+                current_player.save()
+
+                # Check if all team members have voted
+                team_size = locked_room.proposed_team.count()
+                votes_cast = locked_room.players.filter(has_quest_voted=True).count()
                 
-                # Tally the results
-                tally_quest_votes(room, votes)
-                broadcast_game_update(room_code)
+                if votes_cast == team_size:
+                    # Extract the boolean votes
+                    votes = list(locked_room.players.filter(has_quest_voted=True).values_list('quest_vote_success', flat=True))
+                    
+                    # Reset quest voting status for the future
+                    locked_room.players.update(has_quest_voted=False, quest_vote_success=None)
+                    
+                    # Tally the results (saves to DB and advances phase)
+                    tally_quest_votes(locked_room, votes)
+                    
+                    # Inform channels that the tally is complete
+                    broadcast_game_update(room_code)
 
     return redirect('game_room', room_code=room_code)
 
@@ -246,7 +261,7 @@ def assassinate(request, room_code):
         # Ensure they picked either exactly 1 or exactly 2 people
         if len(target_ids) in [1, 2]:
             attempt_assassination(room, target_ids)
-            # broadcast_game_update(room_code) # If using channels
+            broadcast_game_update(room_code) # If using channels
             
     return redirect('game_room', room_code=room_code)
 

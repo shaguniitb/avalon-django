@@ -134,3 +134,6 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
+
+LOGIN_REDIRECT_URL = 'home'  # Where to go after a successful login
+LOGIN_URL = 'login'          # Where to redirect users who aren't logged in
