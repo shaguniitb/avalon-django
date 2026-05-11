@@ -326,9 +326,21 @@
                         
                         <div class="d-flex gap-4 mb-3 flex-wrap justify-content-center bg-white p-3 rounded border w-100" style="max-width: 600px;">
                             <div class="form-check">
+                                <input class="form-check-input" type="checkbox" checked disabled id="roleMerlin">
+                                <label class="form-check-label fw-bold text-primary" for="roleMerlin">Merlin (Mandatory)</label>
+                            </div>
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="special_roles" value="Percival" id="rolePercival">
                                 <label class="form-check-label fw-bold text-primary" for="rolePercival">Percival</label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="special_roles" value="Lovers" id="roleLovers">
+                                <label class="form-check-label fw-bold text-primary" for="roleLovers">Lovers (+2 Players)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" checked disabled id="roleAssassin">
+                                <label class="form-check-label fw-bold text-danger" for="roleAssassin">Assassin (Mandatory)</label>
+                            </div>                                                                                                    
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="special_roles" value="Morgana" id="roleMorgana">
                                 <label class="form-check-label fw-bold text-danger" for="roleMorgana">Morgana</label>
@@ -340,10 +352,6 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="special_roles" value="Oberon" id="roleOberon">
                                 <label class="form-check-label fw-bold text-danger" for="roleOberon">Oberon</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="special_roles" value="Lovers" id="roleLovers">
-                                <label class="form-check-label fw-bold text-success" for="roleLovers">Lovers (+2 Players)</label>
                             </div>
                         </div>
 
@@ -484,14 +492,19 @@
                     {% endif %}
                 
                 {% elif room.current_phase == 'GOOD_WINS' %}
-                    <h3 class="text-primary fw-bold m-0">GOOD WINS!</h3>
+                    <div class="text-center animate-bounce">
+                            <h1 class="display-4 text-primary fw-black m-0" style="text-shadow: 2px 2px 10px rgba(13, 110, 253, 0.3);">GOOD WINS!</h1>
+                            <p class="status-text mt-2">Good wins! The Assassin is currently reconsidering all of their life choices.</p>
+                    </div>
                 {% elif room.current_phase == 'EVIL_WINS' %}
-                    <div class="text-center">
-                        <h3 class="text-danger fw-bold m-0">EVIL WINS!</h3>
+                    <div class="text-center animate-bounce">
+                        <h1 class="display-4 text-danger fw-black m-0" style="text-shadow: 2px 2px 10px rgba(220, 53, 69, 0.3);">EVIL WINS!</h1>
                         {% if room.victory_reason == 'MERLIN_KILLED' %}
                             <p class="text-danger fw-bold mt-2">Congrats, you killed Merlin!</p>
                         {% elif room.victory_reason == 'LOVERS_KILLED' %}
                             <p class="text-danger fw-bold mt-2">Congrats, you killed the Lovers!</p>
+                        {% else %}
+                            <p class="status-text mt-2">The shadows have overtaken the round table.</p>
                         {% endif %}
                     </div>
                 {% else %}
@@ -701,5 +714,50 @@
             location.reload();
         }, 5000);
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+    function celebrate() {
+        const phase = "{{ room.current_phase }}";
+        
+        // Only run if the game just reached a win state
+        if (phase === 'GOOD_WINS' || phase === 'EVIL_WINS') {
+            // Check if we've already celebrated this win in this session
+            if (sessionStorage.getItem('celebrated_{{ room.room_code }}') !== 'true') {
+                
+                const duration = 5 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+                // Colors: Blue/Silver for Good, Red/Gold for Evil
+                const colors = (phase === 'GOOD_WINS') ? ['#0d6efd', '#ffffff'] : ['#dc3545', '#ffc107'];
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+
+                    if (timeLeft <= 0) {
+                        return clearInterval(interval);
+                    }
+
+                    const particleCount = 50 * (timeLeft / duration);
+                    // since particles fall down, start a bit higher than random
+                    confetti(Object.assign({}, defaults, { 
+                        particleCount, 
+                        origin: { x: Math.random(), y: Math.random() - 0.2 },
+                        colors: colors
+                    }));
+                }, 250);
+
+                // Mark as celebrated so it doesn't fire every 5-second reload
+                sessionStorage.setItem('celebrated_{{ room.room_code }}', 'true');
+            }
+        } else {
+            // Reset if the game moves back to Lobby or elsewhere
+            sessionStorage.removeItem('celebrated_{{ room.room_code }}');
+        }
+    }
+
+    // Run on load
+    window.addEventListener('load', celebrate);
+</script>
 </body>
 </html>
