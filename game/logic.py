@@ -1,5 +1,6 @@
 # game/logic.py
 import random
+from django.utils import timezone
 from .models import GameRoom, Player, Mission, TeamProposal
 
 # Dictionary defining (Good, Evil) counts based on total players
@@ -179,6 +180,7 @@ def tally_quest_votes(game_room, votes):
         has_assassin = game_room.players.filter(role='Assassin').exists()
         if has_assassin:
             game_room.current_phase = 'ASSASSIN_PHASE'
+            game_room.assassination_start_time = timezone.now()
         else:
             game_room.current_phase = 'GOOD_WINS'
     elif game_room.score_evil >= 3:

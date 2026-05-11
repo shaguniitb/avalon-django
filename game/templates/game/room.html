@@ -447,6 +447,11 @@
                     </div>
                 
                 {% elif room.current_phase == 'ASSASSIN_PHASE' %}
+
+                    <div id="assassination-timer" style="font-weight: bold; color: red;">
+                        Time Remaining: <span id="timer-display">05:00</span>
+                    </div>                     
+
                     {% if player.role == 'Assassin' %}
                         <div class="w-100 d-flex flex-column align-items-center">
                             <p class="status-text text-danger mb-2">Good has passed 3 quests! Choose your assassination target.</p>
@@ -504,7 +509,7 @@
                         {% elif room.victory_reason == 'LOVERS_KILLED' %}
                             <p class="text-danger fw-bold mt-2">Congrats, you killed the Lovers!</p>
                         {% else %}
-                            <p class="status-text mt-2">The shadows have overtaken the round table.</p>
+                            <p class="status-text mt-2">Let the accusations commence!</p>
                         {% endif %}
                     </div>
                 {% else %}
@@ -758,6 +763,29 @@
 
     // Run on load
     window.addEventListener('load', celebrate);
+
+    const startTime = new Date("{{ room.assassination_start_time|date:'c' }}").getTime();
+    const duration = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const endTime = startTime + duration;
+
+    const timerInterval = setInterval(function() {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+
+        if (distance < 0) {
+            clearInterval(timerInterval);
+            document.getElementById("timer-display").innerHTML = "00:00 - Time is up!";
+            return;
+        }
+
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        document.getElementById("timer-display").innerHTML = 
+            (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+    }, 1000);
+
+
 </script>
 </body>
 </html>
