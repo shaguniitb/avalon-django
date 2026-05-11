@@ -13,3 +13,5 @@ db.sqlite3
 
 # Static media
 media/
+
+.DS_Store/

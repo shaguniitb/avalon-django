@@ -55,6 +55,8 @@ def start_game_and_assign_roles(game_room, special_roles=None):
         evil_roles.append('Morgana')
     if 'Mordred' in special_roles:
         evil_roles.append('Mordred')
+    if 'Oberon' in special_roles:
+        evil_roles.append('Oberon')
 
     if len(good_roles) > num_good or len(evil_roles) > num_evil:
         raise ValueError("Too many special roles selected for this player count!")

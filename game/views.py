@@ -74,7 +74,7 @@ def game_room(request, room_code):
         })
 
 # --- CALCULATE THE HAMMER PLAYER ---
-    hammer_player_id = None
+    hammer_player = None
     if room.current_phase != 'LOBBY' and room.current_leader and num_players > 0:
         current_seat = room.current_leader.seat_order
         failed_votes = room.failed_votes

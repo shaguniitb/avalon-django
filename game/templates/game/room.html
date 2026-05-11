@@ -436,17 +436,46 @@
             sessionStorage.setItem('quest_approved_seen_{{ room.current_round }}', 'true');
         }
 
+// NEW: Restore checkboxes if we are in the lobby
         window.addEventListener('load', () => {
             positionPlayers();
             updateProposeButton();
+            
+            if ("{{ room.current_phase }}" === "LOBBY") {
+                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon'];
+                roles.forEach(id => {
+                    const cb = document.getElementById(id);
+                    if (cb && sessionStorage.getItem(id) === 'true') {
+                        cb.checked = true;
+                    }
+                });
+            }
         });
+
+        // NEW: Save checkboxes right before the page auto-reloads
+        window.addEventListener('beforeunload', () => {
+            if ("{{ room.current_phase }}" === "LOBBY") {
+                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon'];
+                roles.forEach(id => {
+                    const cb = document.getElementById(id);
+                    if (cb) {
+                        sessionStorage.setItem(id, cb.checked);
+                    }
+                });
+            }
+        });
+
         window.addEventListener('resize', positionPlayers);
 
+        // The Auto-Refresh Loop
         setInterval(() => {
             const phase = "{{ room.current_phase }}";
             const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
             const isBuilding = phase === "TEAM_PROPOSAL" || phase === "TEAM_BUILDING";
+            
+            // Stop reloading if the leader is actively picking a team
             if (isLeader && isBuilding) return; 
+            
             location.reload();
         }, 5000);
     </script>
