@@ -64,8 +64,20 @@
         
         .crown-icon { position: absolute; top: -10px; left: -10px; transform: rotate(-35deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
         
-        /* NEW HAMMER ICON CSS */
         .hammer-icon { position: absolute; top: -10px; right: -10px; transform: rotate(15deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
+
+        /* NEW HEART ICON FOR LOVERS */
+        .heart-icon { 
+            position: absolute; top: 35px; right: -15px; 
+            font-size: 1.8rem; z-index: 65; 
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+            animation: heartbeat 1.5s infinite;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
 
         .percival-vision::after { 
             content: "?"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -190,18 +202,25 @@
                     <div class="d-flex flex-column align-items-center">
                         {% if p == room.current_leader %}<span class="crown-icon">👑</span>{% endif %}
                         {% if p == hammer_player %}<span class="hammer-icon">🔨</span>{% endif %}
+
+                        {% if player.role == 'Lover' and p.id in known_player_ids %}
+                            <span class="heart-icon">💖</span>
+                        {% endif %}
                         
                         <div class="player-avatar {% if p.id in known_player_ids and player.role == 'Percival' %}percival-vision{% endif %}"
                              onclick="handleAvatarClick('{{ p.id }}')" id="avatar-{{ p.id }}">
                             
                             <div class="shield-overlay">🛡️</div>
-                            
-                            <i class="bi bi-person-fill toy-icon 
-                                {% if p == player %}{% if p.is_good %} text-primary {% else %} text-danger {% endif %}
-                                {% elif p.id in known_player_ids %}{% if player.role != 'Percival' %} text-danger {% else %} text-secondary {% endif %}
-                                {% else %}text-secondary{% endif %}">
-                            </i>
-                        </div>
+                                <i class="bi bi-person-fill toy-icon 
+                                    {% if p == player %}{% if p.is_good %} text-primary {% else %} text-danger {% endif %}
+                                    {% elif p.id in known_player_ids %}
+                                        {% if player.role == 'Percival' %} text-secondary 
+                                        {% elif player.role == 'Lover' %} text-primary 
+                                        {% else %} text-danger {% endif %}
+                                    {% else %}text-secondary{% endif %}">
+                                </i>                            
+
+                            </div>
 
                         <div class="username-container">
                             <div class="username-text">{{ p.user.username }}</div>
@@ -251,6 +270,10 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="special_roles" value="Oberon" id="roleOberon">
                                 <label class="form-check-label fw-bold text-danger" for="roleOberon">Oberon</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="special_roles" value="Lovers" id="roleLovers">
+                                <label class="form-check-label fw-bold text-success" for="roleLovers">Lovers (+2 Players)</label>
                             </div>
                         </div>
 
@@ -344,6 +367,55 @@
                         {% endif %}
                     </div>
                 
+                {% elif room.current_phase == 'ASSASSIN_PHASE' %}
+                    {% if player.role == 'Assassin' %}
+                        <div class="w-100 d-flex flex-column align-items-center">
+                            <p class="status-text text-danger mb-2">Good has passed 3 quests! Choose your assassination target.</p>
+                            <p class="text-muted small mb-3">Select <strong>1 player</strong> to guess Merlin, OR select <strong>2 players</strong> to guess the Lovers.</p>
+                            
+                            <form action="{% url 'assassinate' room.room_code %}" method="POST" class="w-100 d-flex flex-column align-items-center" id="assassin-form">
+                                {% csrf_token %}
+                                <div class="d-flex flex-wrap justify-content-center gap-3 mb-3">
+                                    {% for p in all_players %}
+                                        {% if p.is_good %} 
+                                        <div class="form-check border rounded px-4 py-2 bg-white">
+                                            <input class="form-check-input target-checkbox" type="checkbox" name="assassin_targets" value="{{ p.id }}" id="target-{{ p.id }}">
+                                            <label class="form-check-label fw-bold" for="target-{{ p.id }}">{{ p.user.username }}</label>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <button type="submit" class="btn btn-danger fw-bold px-5" id="assassinate-btn" disabled>ASSASSINATE</button>
+                            </form>
+                        </div>
+
+                        <script>
+                            // Enable button only if 1 or 2 targets are selected
+                            const checkboxes = document.querySelectorAll('.target-checkbox');
+                            const btn = document.getElementById('assassinate-btn');
+                            
+                            checkboxes.forEach(cb => {
+                                cb.addEventListener('change', () => {
+                                    const checkedCount = document.querySelectorAll('.target-checkbox:checked').length;
+                                    
+                                    // Disable checkboxes if they try to pick a 3rd person
+                                    checkboxes.forEach(box => {
+                                        if (!box.checked) box.disabled = (checkedCount >= 2);
+                                    });
+                                    
+                                    // Enable submit only for 1 or 2 targets
+                                    btn.disabled = (checkedCount === 0 || checkedCount > 2);
+                                });
+                            });
+                        </script>
+                    {% else %}
+                        <p class="status-text text-danger">The Assassin is making their final choice...</p>
+                    {% endif %}
+                
+                {% elif room.current_phase == 'GOOD_WINS' %}
+                    <h3 class="text-primary fw-bold m-0">GOOD WINS!</h3>
+                {% elif room.current_phase == 'EVIL_WINS' %}
+                    <h3 class="text-danger fw-bold m-0">EVIL WINS!</h3>
                 {% else %}
                     <p class="status-text">Waiting for game to advance...</p>
                 {% endif %}
@@ -436,13 +508,13 @@
             sessionStorage.setItem('quest_approved_seen_{{ room.current_round }}', 'true');
         }
 
-// NEW: Restore checkboxes if we are in the lobby
+        // NEW: Restore checkboxes if we are in the lobby (Added roleLovers to the list)
         window.addEventListener('load', () => {
             positionPlayers();
             updateProposeButton();
             
             if ("{{ room.current_phase }}" === "LOBBY") {
-                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon'];
+                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon', 'roleLovers'];
                 roles.forEach(id => {
                     const cb = document.getElementById(id);
                     if (cb && sessionStorage.getItem(id) === 'true') {
@@ -455,7 +527,7 @@
         // NEW: Save checkboxes right before the page auto-reloads
         window.addEventListener('beforeunload', () => {
             if ("{{ room.current_phase }}" === "LOBBY") {
-                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon'];
+                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon', 'roleLovers'];
                 roles.forEach(id => {
                     const cb = document.getElementById(id);
                     if (cb) {

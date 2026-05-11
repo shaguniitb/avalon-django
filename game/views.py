@@ -189,18 +189,20 @@ def cast_quest_vote(request, room_code):
 
     return redirect('game_room', room_code=room_code)
 
+@require_POST
 def assassinate(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
-    current_player = get_object_or_404(Player, user=request.user, game=room)
+    player = get_object_or_404(Player, user=request.user, game=room)
 
-    # Security check: Must be POST, must be ASSASSIN_PHASE, and the user MUST be the Assassin
-    if request.method == "POST" and room.current_phase == 'ASSASSIN_PHASE' and current_player.role == 'Assassin':
-        target_id = request.POST.get('target_player')
+    if room.current_phase == 'ASSASSIN_PHASE' and player.role == 'Assassin':
+        # Get all selected checkboxes from the form
+        target_ids = request.POST.getlist('assassin_targets')
         
-        if target_id:
-            attempt_assassination(room, target_id)
-            broadcast_game_update(room_code)
-
+        # Ensure they picked either exactly 1 or exactly 2 people
+        if len(target_ids) in [1, 2]:
+            attempt_assassination(room, target_ids)
+            # broadcast_game_update(room_code) # If using channels
+            
     return redirect('game_room', room_code=room_code)
 
 def leave_game(request, room_code):

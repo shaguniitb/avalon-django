@@ -57,6 +57,8 @@ def start_game_and_assign_roles(game_room, special_roles=None):
         evil_roles.append('Mordred')
     if 'Oberon' in special_roles:
         evil_roles.append('Oberon')
+    if 'Lovers' in special_roles:
+        good_roles.extend(['Lover', 'Lover'])
 
     if len(good_roles) > num_good or len(evil_roles) > num_evil:
         raise ValueError("Too many special roles selected for this player count!")
@@ -74,7 +76,7 @@ def start_game_and_assign_roles(game_room, special_roles=None):
     for index, player in enumerate(players):
         player.seat_order = index + 1
         player.role = roles[index]
-        player.is_good = player.role in ['Merlin', 'Percival', 'Loyal Servant of Arthur']
+        player.is_good = player.role in ['Merlin', 'Percival', 'Loyal Servant of Arthur', 'Lover']
         player.save()
         
     game_room.current_phase = 'TEAM_BUILDING'
@@ -132,6 +134,12 @@ def get_player_knowledge(room, player):
         for m in merlins:
             knowledge_text.append(f"{m.user.username} is Merlin or Morgana.")
             known_ids.append(m.id)
+    
+    elif player.role == 'Lover':
+        other_lover = room.players.filter(role='Lover').exclude(id=player.id).first()
+        if other_lover:
+            knowledge_text.append(f"{other_lover.user.username} is your Lover.")
+            known_ids.append(other_lover.id)
 
     return {"text": knowledge_text, "ids": known_ids}
 
@@ -180,11 +188,25 @@ def tally_quest_votes(game_room, votes):
         
     game_room.save()
 
-def attempt_assassination(game_room, target_player_id):
-    target = game_room.players.get(id=target_player_id)
+def attempt_assassination(game_room, target_player_ids):
+    targets = game_room.players.filter(id__in=target_player_ids)
+
+    # 1 target = Attempting to shoot Merlin
+    if len(targets) == 1:
+        if targets.first().role == 'Merlin':
+            game_room.current_phase = 'EVIL_WINS'
+        else:
+            game_room.current_phase = 'GOOD_WINS'
+            
+    # 2 targets = Attempting to shoot the Lovers
+    elif len(targets) == 2:
+        roles = [t.role for t in targets]
+        if roles.count('Lover') == 2:
+            game_room.current_phase = 'EVIL_WINS'
+        else:
+            game_room.current_phase = 'GOOD_WINS'    
     
-    if target.role == 'Merlin':
-        game_room.current_phase = 'EVIL_WINS'
+    # Invalid data fallback
     else:
         game_room.current_phase = 'GOOD_WINS'
         
