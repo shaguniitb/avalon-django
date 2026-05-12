@@ -77,7 +77,7 @@ TEMPLATES = [
 ]
 
 # WSGI_APPLICATION = "avalon_project.wsgi.application"
-ASGI_APPLICATION = 'whimsy.asgi.application' # change 'whimsy' to your project folder's name
+# ASGI_APPLICATION = 'whimsy.asgi.application' # change 'whimsy' to your project folder's name
 
 
 # Database
@@ -145,9 +145,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ASGI_APPLICATION = 'avalon_project.asgi.application'
 
 # Configure the Channel Layer (In-Memory for local testing)
+
+# Configure the Channel Layer for Production
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            # This tells Django to look for the REDIS_URL provided by Railway
+            "hosts": [os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")],
+        },
     },
 }
 
