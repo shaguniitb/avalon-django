@@ -181,6 +181,18 @@
                 <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
             </form>
         </div>
+        
+        {% if room.current_phase != 'LOBBY' %}
+            <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ddd;">
+                <strong style="color: black;">Roles in this Game:</strong> 
+                {% for role in room.roles_in_play %}
+                    <span style="font-weight: bold; color: {% if role.is_evil %}red{% else %}blue{% endif %};">
+                        {{ role.name }}</span>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+                
+
+            </div>
+        {% endif %}        
 
         <div class="table-container">
             
@@ -660,13 +672,18 @@
             const avatar = document.getElementById(`avatar-${playerId}`);
             const seat = avatar.closest('.player-seat');
             seat.classList.toggle('on-team');
-            
             updateProposeButton();
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             
             fetch(`/room/{{ room.room_code }}/toggle_player/${playerId}/`, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-            });
+                headers: { 
+                    'X-CSRFToken': csrfToken, 
+                    'Content-Type': 'application/json', 
+                    'X-Requested-With': 'XMLHttpRequest' 
+                }
+            }).catch(err => console.error("Fetch error:", err));
         }
 
         function showQuestAction() {
@@ -715,17 +732,6 @@
 
         window.addEventListener('resize', positionPlayers);
 
-        // The Auto-Refresh Loop
-        setInterval(() => {
-            const phase = "{{ room.current_phase }}";
-            const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
-            const isBuilding = phase === "TEAM_PROPOSAL" || phase === "TEAM_BUILDING";
-            
-            // Stop reloading if the leader is actively picking a team
-            if (isLeader && isBuilding) return; 
-            
-            location.reload();
-        }, 5000);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
@@ -776,22 +782,25 @@
     const duration = 5 * 60 * 1000; // 5 minutes in milliseconds
     const endTime = startTime + duration;
 
-    const timerInterval = setInterval(function() {
-        const now = new Date().getTime();
-        const distance = endTime - now;
+    const myElement = document.getElementById('timer-display');
+    if (myElement) {
+        const timerInterval = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = endTime - now;
 
-        if (distance < 0) {
-            clearInterval(timerInterval);
-            document.getElementById("timer-display").innerHTML = "00:00 - Time is up!";
-            return;
-        }
+            if (distance < 0) {
+                clearInterval(timerInterval);
+                document.getElementById("timer-display").innerHTML = "00:00 - Time is up!";
+                return;
+            }
 
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        document.getElementById("timer-display").innerHTML = 
-            (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-    }, 1000);
+            document.getElementById("timer-display").innerHTML = 
+                (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+        }, 1000);
+    }
 
     const roomCode = "{{ room.room_code }}";
     // Check if we are using http:// or https:// to select ws:// or wss://
@@ -804,6 +813,14 @@
     gameSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         if (data.type === 'game_update') {
+
+            const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
+            const phase = "{{ room.current_phase }}";
+
+            if (isLeader && (phase === 'TEAM_BUILDING' || phase === 'TEAM_PROPOSAL')) {
+                return; 
+            }
+
             console.log("Update received! Reloading...");
             // The server state changed. Refresh to get the new HTML.
             window.location.reload();

@@ -164,6 +164,7 @@ def propose_team(request, room_code):
 
         room.current_phase = "TEAM_VOTING"
         room.save()
+        broadcast_game_update(room_code)
 
     return redirect('game_room', room_code=room_code)
 
@@ -199,8 +200,8 @@ def cast_vote(request, room_code):
             # Reset votes for the next round
             locked_room.players.update(has_voted=False, vote_approve=None)
 
-            # Broadcast the update so everyone sees the results at once
-            broadcast_game_update(room_code)            
+        # Broadcast the update so everyone sees the results at once
+        broadcast_game_update(room_code)            
 
     return redirect('game_room', room_code=room_code)
 
@@ -245,7 +246,7 @@ def cast_quest_vote(request, room_code):
                     tally_quest_votes(locked_room, votes)
                     
                     # Inform channels that the tally is complete
-                    broadcast_game_update(room_code)
+                broadcast_game_update(room_code)
 
     return redirect('game_room', room_code=room_code)
 
@@ -320,5 +321,7 @@ def toggle_player_selection(request, room_code, player_id):
     else:
         room.proposed_team.add(target_player)
         action = "added"
+
+    broadcast_game_update(room_code)
         
     return JsonResponse({'status': 'success', 'action': action})

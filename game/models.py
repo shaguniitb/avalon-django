@@ -62,6 +62,44 @@ class GameRoom(models.Model):
             
         return track    
 
+    @property
+    def roles_in_play(self):
+        """Returns a comma-separated string of roles, sorted by Good -> Evil."""
+        roles = [player.role for player in self.players.all() if player.role]
+        
+        # Get a list of unique roles
+        unique_roles = list(set(roles))
+        
+        # Define the exact sorting order
+        sort_order = {
+            'Merlin': 1,
+            'Percival': 2,
+            'Lover': 3,
+            'Lovers': 3, # Just in case you named them plural!
+            'Loyal Servant of Arthur': 4,
+            'Morgana': 5,
+            'Mordred': 6,
+            'Assassin': 7
+        }
+        
+        # Sort based on the dictionary above. 
+        # (The '100' ensures any unexpected/new roles like 'Oberon' just go to the very end)
+        unique_roles.sort(key=lambda role: sort_order.get(role, 100))
+
+        evil_roles = ['Morgana', 'Mordred', 'Assassin', 'Minion of Mordred', 'Oberon']
+        
+        formatted_roles = []
+        for role in unique_roles:
+            count = roles.count(role)
+            display_name = f"{role}({count})" if count > 1 else role
+
+            # Append a dictionary so the HTML knows if it's evil or not
+            formatted_roles.append({
+                'name': display_name,
+                'is_evil': role in evil_roles
+            })
+        return formatted_roles
+
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='players')
