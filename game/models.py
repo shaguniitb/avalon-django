@@ -103,7 +103,7 @@ class GameRoom(models.Model):
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='players')
-    role = models.CharField(max_length=20, null=True, blank=True) # e.g., 'Merlin', 'Assassin', 'Loyal Servant'
+    role = models.CharField(max_length=50, null=True, blank=True) # e.g., 'Merlin', 'Assassin', 'Loyal Servant'
     is_good = models.BooleanField(default=True)
     seat_order = models.IntegerField(null=True) # Helps pass the leader token
     has_voted = models.BooleanField(default=False)
