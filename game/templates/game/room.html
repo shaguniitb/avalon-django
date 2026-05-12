@@ -186,8 +186,7 @@
             <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ddd;">
                 <strong style="color: black;">Roles in this Game:</strong> 
                 {% for role in room.roles_in_play %}
-                    <span style="font-weight: bold; color: {% if role.is_evil %}red{% else %}blue{% endif %};">
-                        {{ role.name }}</span>{% if not forloop.last %}, {% endif %}
+                    <span style="font-weight: bold; color: {% if role.is_evil %}red{% else %}blue{% endif %};">{{ role.name }}</span>{% if not forloop.last %}, {% endif %}
                 {% endfor %}
                 
 
@@ -285,8 +284,12 @@
                      data-index="{{ forloop.counter0 }}" data-total="{{ all_players.count }}">
                     
                     <div class="d-flex flex-column align-items-center">
-                        {% if p == room.current_leader %}<span class="crown-icon">👑</span>{% endif %}
-                        {% if p == hammer_player %}<span class="hammer-icon">🔨</span>{% endif %}
+                        {% if p == room.current_leader %}
+                            <span class="crown-icon">👑</span>    
+                        {% endif %}
+                        {% if p == hammer_player %}
+                            <span class="hammer-icon">🔨</span>
+                        {% endif %}
 
                         {% if player.role == 'Lover' and p.id in known_player_ids %}
                             <span class="heart-icon">💖</span>
@@ -803,33 +806,43 @@
     }
 
     const roomCode = "{{ room.room_code }}";
-    // Check if we are using http:// or https:// to select ws:// or wss://
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const wsPath = wsScheme + '://' + window.location.host + '/ws/room/' + roomCode + '/';
+    
+    let gameSocket = null;
 
-    const gameSocket = new WebSocket(wsPath);
+    function connectWebSocket() {
+        gameSocket = new WebSocket(wsPath);
 
-    // Listen for messages from the server (your GameRoomConsumer)
-    gameSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        if (data.type === 'game_update') {
+        // Listen for messages from the server
+        gameSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'game_update') {
+                const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
+                const phase = "{{ room.current_phase }}";
+                
+                // Don't auto-reload the leader during team building
+                if (isLeader && (phase === 'TEAM_BUILDING' || phase === 'TEAM_PROPOSAL')) {
+                    return; 
+                }
 
-            const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
-            const phase = "{{ room.current_phase }}";
-
-            if (isLeader && (phase === 'TEAM_BUILDING' || phase === 'TEAM_PROPOSAL')) {
-                return; 
+                console.log("Update received! Reloading...");
+                window.location.reload();
             }
+        };
 
-            console.log("Update received! Reloading...");
-            // The server state changed. Refresh to get the new HTML.
-            window.location.reload();
-        }
-    };
+        // If the socket drops unexpectedly, silently reconnect after 2 seconds!
+        gameSocket.onclose = function(e) {
+            console.error('Game socket closed unexpectedly. Attempting to reconnect...');
+            setTimeout(function() {
+                connectWebSocket();
+            }, 2000);
+        };
+    }
 
-    gameSocket.onclose = function(e) {
-        console.error('Game socket closed unexpectedly. You might need to manually refresh.');
-    };
+    // Initialize the connection when the page loads
+    connectWebSocket();    
+
 
 </script>
 </body>

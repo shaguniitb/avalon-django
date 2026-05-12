@@ -55,6 +55,7 @@ def home(request):
         existing_player = Player.objects.filter(user=user, game=room).first()
         if not existing_player:
             Player.objects.create(user=user, game=room)
+            broadcast_game_update(room_code)
                     
         # Send them to the game room URL
         return redirect('game_room', room_code=room_code)
