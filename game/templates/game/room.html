@@ -96,6 +96,22 @@
             padding: 10px 10px 0 10px; border-radius: 8px; transition: all 0.2s ease;
             background-color: transparent;
         }
+
+/* --- NEW: DIMENSION-SAFE STYLE FOR LOGGED-IN PLAYER (DARK SLATE) --- */
+.player-avatar.is-me {
+    border: 3px solid #343a40 !important; /* Deep Charcoal/Slate */
+    background-color: rgba(52, 58, 64, 0.05) !important; /* Very subtle grey tint */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft, natural drop shadow instead of a neon glow */
+}
+
+/* Highlight the username box itself */
+.username-text.is-me-name {
+    background-color: #343a40 !important; /* Deep Charcoal */
+    border: 1px solid #212529;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+    color: #ffffff !important; /* Crisp white text */
+    font-weight: 600;
+}
         
         body.phase-TEAM_BUILDING .player-seat.on-team .player-avatar,
         body.phase-TEAM_PROPOSAL .player-seat.on-team .player-avatar,
@@ -295,8 +311,8 @@
                             <span class="heart-icon">💖</span>
                         {% endif %}
                         
-                        <div class="player-avatar {% if p.id in known_player_ids and player.role == 'Percival' %}percival-vision{% endif %}"
-                             onclick="handleAvatarClick('{{ p.id }}')" id="avatar-{{ p.id }}">
+                        <div class="player-avatar {% if p.id in known_player_ids and player.role == 'Percival' %}percival-vision{% endif %} {% if p == player %}is-me{% endif %}"
+                            onclick="handleAvatarClick('{{ p.id }}')" id="avatar-{{ p.id }}">                             
                             
                             <div class="shield-overlay">🛡️</div>
                                 <i class="bi bi-person-fill toy-icon 
@@ -311,7 +327,9 @@
                             </div>
 
                         <div class="username-container">
-                            <div class="username-text">{{ p.user.username }}</div>
+                            <div class="username-text {% if p == player %}is-me-name{% endif %}">
+                                {{ p.user.username }} {% if p == player %}<span style="font-size: 0.75rem; font-weight: 900;">(YOU)</span>{% endif %}
+                            </div>                            
 
                             {% if room.current_phase == 'EVIL_WINS' or room.current_phase == 'GOOD_WINS' %}
                                 <div class="secret-role-text {% if p.is_good %}text-primary{% else %}text-danger{% endif %}">

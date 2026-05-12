@@ -13,9 +13,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import dj_database_url
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
 # Quick-start development settings - unsuitable for production
@@ -150,18 +153,24 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Tell Django to use the ASGI application
 ASGI_APPLICATION = 'avalon_project.asgi.application'
 
-# Configure the Channel Layer (In-Memory for local testing)
-
-# Configure the Channel Layer for Production
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            # This tells Django to look for the REDIS_URL provided by Railway
-            "hosts": [os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")],
+# Dynamically switch WebSocket backends based on the environment
+if DEBUG:
+    # Use Local Memory for your computer
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
-    },
-}
+    }
+else:
+    # Use Redis for Railway / Production
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")],
+            },
+        },
+    }
 
 LOGIN_REDIRECT_URL = 'home'  # Where to go after a successful login
 LOGIN_URL = 'login'          # Where to redirect users who aren't logged in
