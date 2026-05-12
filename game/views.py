@@ -13,6 +13,9 @@ from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+import random
+import string
+
 def register(request):
     # If the user is already logged in, redirect them to the home page
     if request.user.is_authenticated:
@@ -38,29 +41,46 @@ def broadcast_game_update(room_code):
         }
     )
 
-
 @login_required
 def home(request):
     if request.method == "POST":
-        room_code = request.POST.get("room_code").upper().strip()
+        action = request.POST.get("action")
         user = request.user        
         
-        # Get or create the room
-        room, room_created = GameRoom.objects.get_or_create(
-            room_code=room_code, 
-            defaults={'host': user} # Only sets the host if creating a new room
-        )
-
-        # Security: Prevent them from joining twice in different browsers
-        existing_player = Player.objects.filter(user=user, game=room).first()
-        if not existing_player:
+        # --- ACTION 1: CREATE A NEW LOBBY ---
+        if action == "create":
+            # Generate a random 5-letter room code that doesn't exist yet
+            while True:
+                room_code = ''.join(random.choices(string.ascii_uppercase, k=5))
+                if not GameRoom.objects.filter(room_code=room_code).exists():
+                    break
+            
+            # Create the room and add the host as the first player
+            room = GameRoom.objects.create(room_code=room_code, host=user)
             Player.objects.create(user=user, game=room)
-            broadcast_game_update(room_code)
-                    
-        # Send them to the game room URL
-        return redirect('game_room', room_code=room_code)
+            
+            # Tell the lobby browser to update if anyone is looking at it
+            broadcast_game_update(room_code) 
+            return redirect('game_room', room_code=room_code)
+
+        # --- ACTION 2: JOIN AN EXISTING LOBBY ---
+        elif action == "join":
+            room_code = request.POST.get("room_code")
+            room = get_object_or_404(GameRoom, room_code=room_code)
+
+            # Security: Prevent joining twice in different browsers
+            existing_player = Player.objects.filter(user=user, game=room).first()
+            if not existing_player:
+                Player.objects.create(user=user, game=room)
+                broadcast_game_update(room_code)
+                        
+            return redirect('game_room', room_code=room_code)
         
-    return render(request, 'game/home.html')
+    # Fetch all rooms that are currently waiting for players (LOBBY phase)
+    available_lobbies = GameRoom.objects.filter(current_phase='LOBBY').prefetch_related('players__user', 'host')
+    
+    return render(request, 'game/home.html', {'available_lobbies': available_lobbies})
+
 
 @login_required
 def game_room(request, room_code):

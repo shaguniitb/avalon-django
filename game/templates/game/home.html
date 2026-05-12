@@ -1,21 +1,85 @@
 <!DOCTYPE html>
-<html>
-<head><title>Play Avalon</title></head>
-<body>
-    <div style="text-align: right; margin-bottom: 20px; margin-right: 100px;">
-        Logged in as <strong>{{ user.username }}</strong> | 
-        <form action="{% url 'logout' %}" method="POST" style="display: inline;">
-            {% csrf_token %}
-            <button type="submit" style="background: none; border: none; color: blue; text-decoration: underline; cursor: pointer; padding: 0; font: inherit;">Log Out</button>
-        </form>
-    </div>    
-    <h1>Join an Avalon Game</h1>
-    <form method="POST">
-        {% csrf_token %}        
-        <label>Room Code:</label>
-        <input type="text" name="room_code" required maxlength="6"><br><br>
-        
-        <button type="submit">Join / Create Room</button>
-    </form>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Play Avalon</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5">Avalon Lobby Browser</h1>
+        <div>
+            Logged in as <strong>{{ user.username }}</strong> | 
+            <form action="{% url 'logout' %}" method="POST" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-link text-danger p-0" style="text-decoration: none;">Log Out</button>
+            </form>
+        </div>
+    </div>
+
+<div class="row">
+        <div class="col-md-8 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0">Available Lobbies</h3>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">Refresh List</a>
+            </div>
+            
+            {% if available_lobbies %}
+                <div class="list-group shadow-sm">
+                    {% for lobby in available_lobbies %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <div>
+                                <h4 class="mb-1 text-primary">Game hosted by {{ lobby.host.username }}</h4>
+                                <small class="text-secondary">
+                                    <strong>Players ({{ lobby.players.count }}/10):</strong> 
+                                    {% for p in lobby.players.all %}
+                                        {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </small>
+                            </div>
+                            
+                            <form method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="join">
+                                <input type="hidden" name="room_code" value="{{ lobby.room_code }}">
+                                <button type="submit" class="btn btn-primary btn-lg">Join</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-secondary text-center shadow-sm">
+                    No games are currently waiting for players. Be the first to start one!
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Start a New Game</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="text-muted mb-4">Create a new public lobby for other players to join.</p>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create">
+                        <button type="submit" class="btn btn-success w-100 btn-lg">
+                            <i class="bi bi-plus-circle-fill"></i> Create Game
+                        </button>
+                    </form>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 </body>
 </html>
