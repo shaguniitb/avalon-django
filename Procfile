@@ -1,1 +1,1 @@
-web: gunicorn avalon_project.wsgi
+web: daphne avalon_project.asgi:application
