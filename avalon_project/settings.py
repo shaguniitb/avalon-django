@@ -30,7 +30,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 
-ALLOWED_HOSTS = [*]
+ALLOWED_HOSTS = ["*"]
 # ALLOWED_HOSTS = [os.environ.get("RAILWAY_STATIC_URL"), "localhost", "127.0.0.1"]
 
 
