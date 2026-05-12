@@ -30,11 +30,14 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*", "avalon.shagunjhaver.com"]
 # ALLOWED_HOSTS = [os.environ.get("RAILWAY_STATIC_URL"), "localhost", "127.0.0.1"]
 
 # Add this line to trust form submissions from Railway
-CSRF_TRUSTED_ORIGINS = ['https://*.up.railway.app']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.up.railway.app',
+    'https://avalon.shagunjhaver.com'
+]
 
 
 # Application definition
