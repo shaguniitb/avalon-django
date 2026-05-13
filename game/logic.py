@@ -224,3 +224,46 @@ def attempt_assassination(game_room, target_player_ids):
         game_room.current_phase = 'GOOD_WINS'
         
     game_room.save()
+
+def reset_room_for_rematch(room):
+    """
+    Resets the game room back to a clean lobby state
+    while keeping the same players in the room.
+    """
+
+    # Reset core room state
+    room.current_phase = 'LOBBY'
+    room.current_round = 1
+    room.failed_votes = 0
+
+    room.score_good = 0
+    room.score_evil = 0
+
+    room.victory_reason = None
+    room.assassination_start_time = None
+
+    room.current_leader = None
+
+    # Clear proposed team
+    room.proposed_team.clear()
+
+    # Delete historical game data
+    room.missions.all().delete()
+    room.history_proposals.all().delete()
+
+    # Reset all players
+    for player in room.players.all():
+        player.role = None
+        player.is_good = True
+
+        player.has_voted = False
+        player.vote_approve = None
+
+        player.has_quest_voted = False
+        player.quest_vote_success = None
+
+        player.last_vote = None
+
+        player.save()
+
+    room.save()    

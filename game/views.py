@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.db import transaction
 from .models import GameRoom, Player
-from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size
+from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, reset_room_for_rematch
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -307,20 +307,34 @@ def assassinate(request, room_code):
             
     return redirect('game_room', room_code=room_code)
 
+@require_POST
+@login_required
 def leave_game(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
     
     try:
         player = Player.objects.get(user=request.user, game=room)
-        
-        # If the host leaves, destroy the entire room
-        if request.user == room.host:
+
+        is_host = (request.user == room.host)
+
+        player.delete()
+
+        remaining_players = room.players.count()
+
+        # If nobody is left, clean up the room
+        if remaining_players == 0:
             room.delete()
-            # We don't broadcast here because the room is gone. 
-            # The WebSocket will naturally close or error out for others.
-        else:
-            player.delete()
-            broadcast_game_update(room_code) # Tell everyone else to refresh the lobby
+            return redirect('home')
+
+        # If the host left, transfer host ownership
+        if is_host:
+            new_host = room.players.order_by('seat_order', 'id').first()
+
+            if new_host:
+                room.host = new_host.user
+                room.save()
+
+        broadcast_game_update(room_code)                        
             
     except Player.DoesNotExist:
         pass
@@ -375,3 +389,23 @@ def toggle_player_selection(request, room_code, player_id):
     )        
         
     return JsonResponse({'status': 'success', 'action': action})
+
+@require_POST
+@login_required
+def play_again(request, room_code):
+    room = get_object_or_404(GameRoom, room_code=room_code)
+
+    # Only host can reset the room
+    if request.user != room.host:
+        return redirect('game_room', room_code=room_code)
+
+    # Only after game end
+    if room.current_phase not in ['GOOD_WINS', 'EVIL_WINS']:
+        return redirect('game_room', room_code=room_code)
+
+    reset_room_for_rematch(room)
+
+    # Refresh everyone instantly
+    broadcast_game_update(room_code)
+
+    return redirect('game_room', room_code=room_code)

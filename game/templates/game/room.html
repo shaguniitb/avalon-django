@@ -586,6 +586,27 @@
                     <div class="text-center animate-bounce">
                             <h1 class="display-4 text-primary fw-black m-0" style="text-shadow: 2px 2px 10px rgba(13, 110, 253, 0.3);">GOOD WINS!</h1>
                             <p class="status-text mt-2">Good wins! The Assassin is currently reconsidering all of their life choices.</p>
+
+                        <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+
+                            {% if player.user == room.host %}
+                            <form action="{% url 'play_again' room.room_code %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg fw-bold">
+                                    Play Again
+                                </button>
+                            </form>
+                            {% endif %}
+                            
+                            <form action="{% url 'leave_game' room.room_code %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
+                                    Return to Lobby
+                                </button>
+                            </form>
+                        </div>
+
+                            
                     </div>
                 {% elif room.current_phase == 'EVIL_WINS' %}
                     <div class="text-center animate-bounce">
@@ -597,6 +618,25 @@
                         {% else %}
                             <p class="status-text mt-2">Let the accusations commence!</p>
                         {% endif %}
+                        <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+
+                            {% if player.user == room.host %}
+                            <form action="{% url 'play_again' room.room_code %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg fw-bold">
+                                    Play Again
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <form action="{% url 'leave_game' room.room_code %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
+                                    Return to Lobby
+                                </button>
+                            </form>
+                        </div>
+
                     </div>
                 {% else %}
                     <p class="status-text">Waiting for game to advance...</p>
