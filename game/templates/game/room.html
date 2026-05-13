@@ -40,12 +40,11 @@
             z-index: 10;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }      
-  
-        
-/* VOTING HISTORY TABLE (80% Scale) */
+
+        /* VOTING HISTORY TABLE */
         .history-table-wrapper { 
             overflow-x: auto; 
-            max-width: 900px; 
+            max-width: 1000px; 
             margin: 0 auto; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
             padding-bottom: 10px; 
@@ -54,52 +53,66 @@
         .history-table { 
             width: max-content;
             margin: 0 auto;
-            border-collapse: collapse; 
-            /* Add 'ui-monospace' and 'monospace' to the font stack */
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 0.68rem;
-            background: #fff; 
-            border: 2.5px solid #000; 
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            font-weight: 500;
+        }
+
+        .history-table th, .history-table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Thick, striking vertical separators for missions */
+        .mission-divider {
+            border-right: 5px solid #000000 !important; /* Pitch black and extra thick */
+        }
+
+        /* VIBRANT Vote Background Colors (Lighter but still popping) */
+        .bg-vote-approve {
+            background-color: #34c759 !important; /* Bright, vibrant green */
+            border-color: #2da94c !important;
+        }
+        
+        .bg-vote-reject {
+            background-color: #ff3b30 !important; /* Bright, vibrant red */
+            border-color: #d63329 !important;
+        }
+
+        /* The Team Member Tick - Thicker and Prominent */
+        .team-tick {
+            font-size: 1.8rem; /* Made slightly larger */
+            font-weight: 900;
+            color: #ffffff; 
+            -webkit-text-stroke: 2px #ffffff; /* Artificially thickens the checkmark! */
+            text-shadow: 0px 3px 5px rgba(0,0,0,0.6); /* Drop shadow to keep it separated from the background */
+            line-height: 1;
+        }
+
+        .team-shield {
+            font-size: 1.5rem; 
+            color: #0d6efd; /* Bold Royal Blue */
+            -webkit-text-stroke: 1px #084298; /* Darker blue outline */
+            text-shadow: 0px 3px 5px rgba(0,0,0,0.5); /* Deep drop shadow */
+            line-height: 1;
         }        
-        
-        .history-table th, .history-table td { 
-            border: 1px solid #000; 
-            padding: 5px 8px; /* 80% of 6px 10px */
-            text-align: center; 
-            vertical-align: middle; 
+
+        /* High-Visibility Leader Crown */
+        .leader-crown {
+            font-size: 1.2rem; /* Make it just a tiny bit larger */
+            
+            /* Stacking hard shadows in all 4 directions creates a solid black outline */
+            text-shadow: 
+                -1px -1px 0 #000,  
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000,
+                 0px  4px 6px rgba(0,0,0,0.8); /* A heavy drop shadow for extra depth */
+                 
+            vertical-align: middle;
         }
+ 
+
+
         
-        .history-table th { background-color: #f8f9fa; font-weight: bold; }
-        .history-table thead { border-bottom: 2.5px solid #000; }
-        .history-table .player-name { 
-            text-align: left; 
-            font-weight: 700; 
-            white-space: nowrap; 
-            border-right: 2.5px solid #000; 
-        }
-        
-        .cell-on-team { background-color: #8ae2a3 !important; }
-        .cell-off-team { background-color: #ff9e9e !important; }
-        
-        .vote-approve { 
-            color: #004d1a !important; 
-            font-size: 1.2rem; /* 80% of 1.5rem */
-            font-weight: 900; 
-            -webkit-text-stroke: 1.2px #004d1a; 
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8); 
-        }
-        
-        .vote-reject { 
-            color: #7a0000 !important; 
-            font-size: 1.1rem; /* 80% of 1.4rem */
-            font-weight: 900; 
-            -webkit-text-stroke: 1.2px #7a0000; 
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
-        }
 
         .table-container { 
             width: 100%; max-width: 850px; height: 500px; 
@@ -595,73 +608,96 @@
 
     {% if history_headers %}
     <div class="container mt-2 mb-5">
-        <h5 class="fw-bold mb-3 text-center border-bottom pb-2" style="max-width: 900px; margin: 0 auto;">Voting History</h5>
-        <div class="history-table-wrapper">
-            <table class="history-table">
-                <colgroup>
-                    <col> </colgroup>
-                {% for h in history_headers %}
-                    <colgroup span="{{ h.colspan }}" style="border-right: 2.5px solid #000;"></colgroup>
-                {% endfor %}
-                
-                <thead>
-                    <tr>
-                        <th rowspan="2" class="player-name align-middle">Player</th>
-                        {% for h in history_headers %}
-                            <th colspan="{{ h.colspan }}">Mission {{ h.round }}</th>
-                        {% endfor %}
-                    </tr>
-                    <tr>
-                        {% for attempt in attempt_numbers %}
-                            <th style="font-size: 0.75rem; color: #6c757d;">#{{ attempt }}</th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ph in player_history %}
-                    <tr>
-                        <td class="player-name">{{ ph.player.user.username }}</td>
-                        {% for v in ph.votes %}
-                        <td class="position-relative {% if v.on_team %}cell-on-team{% else %}cell-off-team{% endif %}">
-
-                            {% if v.is_leader %}
-                                <div style="position: absolute; top: -2px; left: 2px; font-size: 0.7rem; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 4px rgba(255,255,255,0.8);" title="Proposed this team">👑</div>
-                            {% endif %}
-                            
-                            {% if v.vote == 'approve' %}
-                                <i class="bi bi-check-lg vote-approve"></i>
-                            {% else %}
-                                &nbsp;
-                            {% endif %}
-                        </td>
-                        {% endfor %}
-                    </tr>
+        <!-- <h5 class="fw-bold mb-3 text-center border-bottom pb-2" style="max-width: 900px; margin: 0 auto;">Voting History</h5> -->
+    <div class="history-table-wrapper mt-5 bg-white border rounded">
+        <h5 class="text-center mb-0 py-3 fw-bold bg-light border-bottom">Voting History</h5>
+        
+        <table class="table table-sm table-bordered history-table shadow-sm mb-0" style="border-collapse: collapse;">
+            <colgroup class="mission-divider">
+                <col>
+            </colgroup>
+            
+            {% for header in history_headers %}
+                <colgroup span="{{ header.colspan }}" class="mission-divider"></colgroup>
+            {% endfor %}
+            
+            <thead>
+                <tr style="border-bottom: 3px solid #000000;">
+                    <th class="align-middle text-start ps-3 bg-light text-uppercase text-secondary" style="font-size: 0.9rem; letter-spacing: 1px;">Player</th>
+                    
+                    {% for header in history_headers %}
+                        <th colspan="{{ header.colspan }}" class="text-center text-uppercase py-2 text-dark bg-light" style="font-weight: 800; letter-spacing: 1px; font-size: 0.95rem;">
+                            Mission {{ header.round }}
+                        </th>
                     {% endfor %}
-                </tbody>
-            </table>
-            <div class="table-legend d-flex justify-content-center gap-4 mt-2">
-                <div class="d-flex align-items-center gap-1">
-                    <div style="width: 12px; height: 12px; background-color: #8ae2a3; border: 1px solid #000;"></div>
-                    <span>On Team</span>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                    <div style="width: 12px; height: 12px; background-color: #ff9e9e; border: 1px solid #000;"></div>
-                    <span>Off Team</span>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                    <i class="bi bi-check-lg" style="color: #004d1a; font-weight: 900;"></i>
-                    <span>Approved</span>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                    <span style="width: 12px; text-align: center;">&nbsp;</span>
-                    <span class="text-muted">Empty = Rejected</span>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                    <span style="font-size: 0.8rem;">👑</span>
-                    <span>Proposer</span>
-                </div>
+                </tr>
+                <tr>
+                    <th class="bg-light border-top"></th> 
+                    
+                    {% for attempt in attempt_numbers %}
+                        <th class="text-center text-muted small py-1 bg-light border-top" style="font-size: 0.8rem;">
+                            Vote {{ attempt }}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            
+            <tbody>
+                {% for ph in player_history %}
+                <tr>
+                    <td class="fw-bold text-start ps-3 align-middle bg-white">{{ ph.player.user.username }}</td>
+                    
+                    {% for v in ph.votes %}
+                        <td class="{% if v.vote == 'approve' %}bg-vote-approve{% elif v.vote == 'reject' %}bg-vote-reject{% else %}bg-white{% endif %} position-relative p-0" style="min-width: 55px;">
+                            <div class="d-flex align-items-center justify-content-center w-100 h-100" style="min-height: 40px;">
+                                {% if v.is_leader %}
+                                    <span class="fs-6 me-1 leader-crown" title="Leader">👑</span>
+                                {% endif %}
+                                {% if v.on_team %}
+                                    <i class="bi bi-shield-fill team-shield" title="On Team"></i>
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+        
+    <div class="mt-3 p-3 bg-white border rounded shadow-sm mx-auto" style="max-width: 1000px;">
+        <h6 class="fw-bold mb-3 text-muted text-uppercase" style="letter-spacing: 1px; font-size: 0.85rem;">How to read this table</h6>
+        <div class="d-flex flex-wrap gap-4 align-items-center">
+            
+            <div class="d-flex align-items-center">
+                <div class="bg-vote-approve border border-dark rounded" style="width: 28px; height: 28px;"></div>
+                <span class="ms-2 fw-bold text-dark">= Approve</span>
             </div>
+            
+            <div class="d-flex align-items-center">
+                <div class="bg-vote-reject border border-dark rounded" style="width: 28px; height: 28px;"></div>
+                <span class="ms-2 fw-bold text-dark">= Reject</span>
+            </div>
+
+            <div class="d-flex align-items-center">
+                <div class="bg-light border border-dark rounded d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background-color: #343a40 !important;">
+                    <i class="bi bi-shield-fill team-shield" style="font-size: 1rem; text-shadow: none;"></i>
+                </div>
+                <span class="ms-2 fw-bold text-dark">= On Proposed Team</span>
+            </div>
+
+            
+            <div class="d-flex align-items-center">
+                <div class="bg-light border border-dark rounded d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                    <span class="fs-6 leader-crown">👑</span>
+                </div>
+                <span class="ms-2 fw-bold text-dark">= Team Leader</span>
+            </div>
+            
         </div>
+    </div>
+    
+
     </div>
     {% endif %}
 
