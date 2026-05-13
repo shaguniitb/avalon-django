@@ -93,16 +93,20 @@ def game_room(request, room_code):
     knowledge_data = get_player_knowledge(room, player)
     all_players = room.players.all().order_by('seat_order', 'id')
 
-    proposals = room.history_proposals.all().order_by('id')
+    proposals = room.history_proposals.prefetch_related('team', 'approves', 'rejects').order_by('id')
+
     history_headers = []
     attempt_numbers = []
     player_history = []
 
     if proposals.exists():
-        # 1. Build the dynamic headers with colspan
         current_round = None
         count = 0
         attempt = 1
+        
+        # 2. FIX: Pre-compute the IDs into Python sets for lightning-fast O(1) memory lookups
+        proposal_data_cache = []
+        
         for prop in proposals:
             if prop.round_number != current_round:
                 if current_round is not None:
@@ -115,26 +119,36 @@ def game_room(request, room_code):
                 attempt += 1
             attempt_numbers.append(attempt)
             
+            # Cache the IDs in memory. Because we used prefetch_related, `.all()` does NOT hit the DB here.
+            proposal_data_cache.append({
+                'leader_id': prop.leader_id if prop.leader else None,
+                'team_ids': {p.id for p in prop.team.all()},
+                'approve_ids': {p.id for p in prop.approves.all()},
+                'reject_ids': {p.id for p in prop.rejects.all()},
+            })
+            
         if current_round is not None:
             history_headers.append({'round': current_round, 'colspan': count})
             
-        # 2. Build each player's row data
+        # 3. FIX: Loop through the in-memory cache instead of querying the database
         for p in all_players:
             p_votes = []
-            for prop in proposals:
-                on_team = prop.team.filter(id=p.id).exists()
-                if prop.approves.filter(id=p.id).exists():
+            for prop_data in proposal_data_cache:
+                
+                # Check Python sets instead of .filter().exists()
+                on_team = p.id in prop_data['team_ids']
+                
+                if p.id in prop_data['approve_ids']:
                     vote = 'approve'
-                elif prop.rejects.filter(id=p.id).exists():
+                elif p.id in prop_data['reject_ids']:
                     vote = 'reject'
                 else:
                     vote = 'none'
 
-                is_leader = (prop.leader == p) if prop.leader else False
+                is_leader = (prop_data['leader_id'] == p.id)
                 p_votes.append({'on_team': on_team, 'vote': vote, 'is_leader': is_leader})
                 
-            player_history.append({'player': p, 'votes': p_votes})
-        
+            player_history.append({'player': p, 'votes': p_votes})            
 
     context = {
         'room': room,
@@ -142,13 +156,13 @@ def game_room(request, room_code):
         'all_players': all_players,
         'knowledge': knowledge_data["text"],
         'known_player_ids': knowledge_data["ids"],
-        'mission_track': room.mission_track, 
-        'hammer_player': room.hammer_player,   
+        'mission_track': getattr(room, 'mission_track', None), 
+        'hammer_player': getattr(room, 'hammer_player', None),   
         'history_headers': history_headers,
         'attempt_numbers': attempt_numbers,
         'player_history': player_history,
     }
-    return render(request, 'game/room.html', context) # (or 'game/room.html' depending on your setup)
+    return render(request, 'game/room.html', context) 
 
 def start_game(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
@@ -194,11 +208,9 @@ def cast_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
 
     with transaction.atomic():
-        # Lock this specific room row for the duration of this transaction
         locked_room = GameRoom.objects.select_for_update().get(id=room.id)
         player = get_object_or_404(Player, user=request.user, game=locked_room)
 
-        # Prevent a player from double-voting if they spam the button
         if player.has_voted:
             return redirect('game_room', room_code=room_code)        
         
@@ -213,16 +225,25 @@ def cast_vote(request, room_code):
         player.has_voted = True
         player.save()
 
-        # Check if everyone has voted using the LOCKED room state
+        # Check if everyone has voted
         if locked_room.players.filter(has_voted=False).count() == 0:
             votes = list(locked_room.players.values_list('vote_approve', flat=True))
             tally_team_votes(locked_room, votes)
-
-            # Reset votes for the next round
             locked_room.players.update(has_voted=False, vote_approve=None)
 
-        # Broadcast the update so everyone sees the results at once
-        broadcast_game_update(room_code)            
+            # EVERYONE VOTED: Do a full broadcast to reveal results
+            broadcast_game_update(room_code)            
+        else:
+            # NOT EVERYONE VOTED: Send a targeted event to update UI without reloading
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'game_{room_code}',
+                {
+                    'type': 'game_update',
+                    'event_type': 'player_voted',
+                    'player_id': player.id
+                }
+            )
 
     return redirect('game_room', room_code=room_code)
 
@@ -231,43 +252,42 @@ def cast_quest_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
     
     with transaction.atomic():
-        # Lock the room row
         locked_room = GameRoom.objects.select_for_update().get(id=room.id)
         current_player = get_object_or_404(Player, user=request.user, game=locked_room)
 
-        # Verify phase and ensure they haven't already voted
         if locked_room.current_phase == 'QUESTING' and not current_player.has_quest_voted:
-            
-            # Security check: Make sure this player is actually on the mission!
             if current_player in locked_room.proposed_team.all():
                 vote_choice = request.POST.get('quest_vote')
                 current_player.has_quest_voted = True
 
-                # Good players MUST vote success. Only evil players can vote fail.
                 if current_player.is_good:
                     current_player.quest_vote_success = True
                 else:
                     current_player.quest_vote_success = (vote_choice == 'success')
                 
-                # Save the vote
                 current_player.save()
 
-                # Check if all team members have voted
                 team_size = locked_room.proposed_team.count()
                 votes_cast = locked_room.players.filter(has_quest_voted=True).count()
                 
                 if votes_cast == team_size:
-                    # Extract the boolean votes
                     votes = list(locked_room.players.filter(has_quest_voted=True).values_list('quest_vote_success', flat=True))
-                    
-                    # Reset quest voting status for the future
                     locked_room.players.update(has_quest_voted=False, quest_vote_success=None)
-                    
-                    # Tally the results (saves to DB and advances phase)
                     tally_quest_votes(locked_room, votes)
                     
-                    # Inform channels that the tally is complete
-                broadcast_game_update(room_code)
+                    # MISSION COMPLETE: Full broadcast to reveal results
+                    broadcast_game_update(room_code)
+                else:
+                    # MISSION ONGOING: Send a targeted event
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        f'game_{room_code}',
+                        {
+                            'type': 'game_update',
+                            'event_type': 'player_voted',
+                            'player_id': current_player.id
+                        }
+                    )
 
     return redirect('game_room', room_code=room_code)
 
@@ -343,6 +363,15 @@ def toggle_player_selection(request, room_code, player_id):
         room.proposed_team.add(target_player)
         action = "added"
 
-    broadcast_game_update(room_code)
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'game_{room_code}',
+        {
+            'type': 'game_update',             # Still routes to the same consumer method
+            'event_type': 'player_toggled',    # Custom flag to tell JS what to do
+            'player_id': player_id,
+            'action': action
+        }
+    )        
         
     return JsonResponse({'status': 'success', 'action': action})

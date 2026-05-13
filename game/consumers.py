@@ -22,8 +22,5 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
 
     # Receive message from room group (triggered by views)
     async def game_update(self, event):
-        # Send message to the actual WebSocket (the browser)
-        await self.send(text_data=json.dumps({
-            'type': 'game_update',
-            'message': 'Refresh the page!'
-        }))
+        # Send the ENTIRE event dictionary to the WebSocket browser client
+        await self.send(text_data=json.dumps(event))

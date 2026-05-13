@@ -9,6 +9,39 @@
     
     <style>
         body { background-color: #ffffff; color: #212529; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+
+        /* Ensure the seat can hold a positioned element */
+        .player-seat {
+            position: relative;
+        }
+
+        /* Dims the avatar slightly when they have voted */
+        .player-seat.has-voted {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        /* The Diagonal "VOTED" Stamp */
+        .player-seat.has-voted::after {
+            content: 'VOTED';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-20deg);
+            background-color: #198754; /* Bootstrap success green */
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            padding: 4px 12px;
+            border: 2px solid white;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            pointer-events: none; /* Ensures the stamp doesn't block mouse clicks */
+            z-index: 10;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }      
+  
         
 /* VOTING HISTORY TABLE (80% Scale) */
         .history-table-wrapper { 
@@ -296,7 +329,7 @@
             </div>
             
             {% for p in all_players %}
-                <div class="player-seat translate-middle {% if p in room.proposed_team.all %} on-team {% endif %}"
+                <div class="player-seat {% if p.has_voted or p.has_quest_voted %}has-voted{% endif %} translate-middle {% if p in room.proposed_team.all %} on-team {% endif %}"
                      data-index="{{ forloop.counter0 }}" data-total="{{ all_players.count }}">
                     
                     <div class="d-flex flex-column align-items-center">
@@ -440,7 +473,7 @@
                             document.getElementById('proposed-players-text').innerText = "{{ room.current_leader.user.username }} chose mission team: " + pText;
                         </script>
 
-                        <form action="{% url 'cast_vote' room.room_code %}" method="POST" class="d-flex gap-2 m-0">
+                        <form action="{% url 'cast_vote' room.room_code %}" method="POST" class="d-flex gap-2 m-0" onsubmit="handleVoteSubmit(event)">
                             {% csrf_token %}
                             <button type="submit" name="vote_choice" value="approve" class="btn btn-success fw-bold px-4">Approve</button>
                             <button type="submit" name="vote_choice" value="reject" class="btn btn-danger fw-bold px-4">Reject</button>
@@ -466,7 +499,7 @@
                     <div id="quest-action-step" class="d-none align-items-center justify-content-center w-100">
                         {% if player in room.proposed_team.all %}
                             {% if not player.has_quest_voted %}
-                                <form action="{% url 'cast_quest_vote' room.room_code %}" method="POST" class="d-flex gap-3 m-0 align-items-center">
+                                <form action="{% url 'cast_quest_vote' room.room_code %}" method="POST" class="d-flex gap-3 m-0 align-items-center" onsubmit="handleVoteSubmit(event)">
                                     {% csrf_token %}
                                     <button type="submit" name="quest_vote" value="success" class="btn btn-primary fw-bold px-4">Success</button>
                                     {% if not player.is_good %}
@@ -823,6 +856,36 @@
         }, 1000);
     }
 
+    function handleVoteSubmit(event) {
+        const form = event.target;
+        
+        // event.submitter tells us exactly which button (Approve or Reject) the user clicked
+        const clickedButton = event.submitter; 
+        
+        if (!clickedButton) return;
+
+        // We wrap the disable logic in a setTimeout of 0 milliseconds.
+        // This allows the browser to successfully submit the 'vote_choice' value 
+        // to Django before the button becomes disabled.
+        setTimeout(() => {
+            const allButtons = form.querySelectorAll('button');
+            allButtons.forEach(btn => btn.disabled = true);
+            
+            // Handle both Team Voting and Quest Voting buttons
+            if (clickedButton.value === 'approve') {
+                clickedButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Approving...';
+            } else if (clickedButton.value === 'reject') {
+                clickedButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Rejecting...';
+            } else if (clickedButton.value === 'success') {
+                clickedButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Voting Success...';
+            } else if (clickedButton.value === 'fail') {
+                clickedButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Voting Fail...';
+            }
+        }, 0);
+
+    }
+    
+
     const roomCode = "{{ room.room_code }}";
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     const wsPath = wsScheme + '://' + window.location.host + '/ws/room/' + roomCode + '/';
@@ -836,6 +899,31 @@
         gameSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             if (data.type === 'game_update') {
+                
+                // --- NEW: Intercept the toggle event and update UI without reloading ---
+                if (data.event_type === 'player_toggled') {
+                    const avatar = document.getElementById(`avatar-${data.player_id}`);
+                    if (avatar) {
+                        const seat = avatar.closest('.player-seat');
+                        if (data.action === 'added') {
+                            seat.classList.add('on-team');
+                        } else {
+                            seat.classList.remove('on-team');
+                        }
+                    }
+                    return; // EXIT EARLY: Do not execute the reload logic below!
+                }
+
+                if (data.event_type === 'player_voted') {
+                    const avatar = document.getElementById(`avatar-${data.player_id}`);
+                    if (avatar) {
+                        const seat = avatar.closest('.player-seat');
+                        seat.classList.add('has-voted'); 
+                    }
+                    return; // EXIT EARLY: Do not execute the reload logic!
+                }                
+
+                // --- OLD: Standard reload logic for phase changes, etc. ---
                 const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
                 const phase = "{{ room.current_phase }}";
                 
@@ -847,7 +935,8 @@
                 console.log("Update received! Reloading...");
                 window.location.reload();
             }
-        };
+        };        
+
 
         // If the socket drops unexpectedly, silently reconnect after 2 seconds!
         gameSocket.onclose = function(e) {
