@@ -100,6 +100,8 @@ def home(request):
             if not is_player:
                 Spectator.objects.get_or_create(user=user, game=room)
 
+            # broadcast_game_update(room_code)                
+
             return redirect('game_room', room_code=room_code)        
         
     # Fetch all rooms that are currently waiting for players (LOBBY phase)
