@@ -270,6 +270,10 @@ def cast_vote(request, room_code):
     if not Player.objects.filter(user=request.user, game=room).exists():
         return redirect('game_room', room_code=room_code)    
 
+    # Set up flags to track what to broadcast AFTER the transaction
+    should_full_refresh = False
+    broadcast_player_id = None
+
     with transaction.atomic():
         locked_room = GameRoom.objects.select_for_update().get(id=room.id)
         player = get_object_or_404(Player, user=request.user, game=locked_room)
@@ -293,20 +297,30 @@ def cast_vote(request, room_code):
             votes = list(locked_room.players.values_list('vote_approve', flat=True))
             tally_team_votes(locked_room, votes)
             locked_room.players.update(has_voted=False, vote_approve=None)
-
-            # EVERYONE VOTED: Do a full broadcast to reveal results
-            broadcast_game_update(room_code)            
+            
+            # Flag that we need a full refresh, but DO NOT broadcast yet!
+            should_full_refresh = True
         else:
-            # NOT EVERYONE VOTED: Send a targeted event to update UI without reloading
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f'game_{room_code}',
-                {
-                    'type': 'game_update',
-                    'event_type': 'player_voted',
-                    'player_id': player.id
-                }
-            )
+            # Flag the player ID for the silent update
+            broadcast_player_id = player.id
+
+
+    # --- OUTSIDE THE TRANSACTION (Database is now 100% committed and saved) ---
+    
+    if should_full_refresh:
+        # EVERYONE VOTED: Now it is safe to tell clients to reload
+        broadcast_game_update(room_code)            
+    elif broadcast_player_id:
+        # NOT EVERYONE VOTED: Send targeted event
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'game_{room_code}',
+            {
+                'type': 'game_update',
+                'event_type': 'player_voted',
+                'player_id': broadcast_player_id
+            }
+        )
 
     return redirect('game_room', room_code=room_code)
 
@@ -316,6 +330,10 @@ def cast_quest_vote(request, room_code):
     if not Player.objects.filter(user=request.user, game=room).exists():
         return redirect('game_room', room_code=room_code)    
     
+    # 1. Set up flags to track what to broadcast AFTER the transaction
+    should_full_refresh = False
+    broadcast_player_id = None
+
     with transaction.atomic():
         locked_room = GameRoom.objects.select_for_update().get(id=room.id)
         current_player = get_object_or_404(Player, user=request.user, game=locked_room)
@@ -340,19 +358,27 @@ def cast_quest_vote(request, room_code):
                     locked_room.players.update(has_quest_voted=False, quest_vote_success=None)
                     tally_quest_votes(locked_room, votes)
                     
-                    # MISSION COMPLETE: Full broadcast to reveal results
-                    broadcast_game_update(room_code)
+                    # Flag that we need a full refresh, but DO NOT broadcast yet!
+                    should_full_refresh = True
                 else:
-                    # MISSION ONGOING: Send a targeted event
-                    channel_layer = get_channel_layer()
-                    async_to_sync(channel_layer.group_send)(
-                        f'game_{room_code}',
-                        {
-                            'type': 'game_update',
-                            'event_type': 'player_voted',
-                            'player_id': current_player.id
-                        }
-                    )
+                    # Flag the player ID for the silent update
+                    broadcast_player_id = current_player.id
+
+    # --- 2. OUTSIDE THE TRANSACTION (Database is now 100% committed and saved) ---
+    if should_full_refresh:
+        # MISSION COMPLETE: Full broadcast to reveal results
+        broadcast_game_update(room_code)
+    elif broadcast_player_id:
+        # MISSION ONGOING: Send a targeted event to update UI without reloading
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'game_{room_code}',
+            {
+                'type': 'game_update',
+                'event_type': 'player_voted',
+                'player_id': broadcast_player_id
+            }
+        )
 
     return redirect('game_room', room_code=room_code)
 
