@@ -22,12 +22,10 @@
 
         /* The Diagonal "VOTED" Stamp */
         .player-seat.has-voted::after {
-            content: 'VOTED';
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-20deg);
-            background-color: #198754; /* Bootstrap success green */
             color: #ffffff;
             font-weight: 900;
             font-size: 1.1rem;
@@ -40,6 +38,18 @@
             z-index: 10;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         }      
+
+        /* 2. Text and color for TEAM VOTING (Everyone votes on the roster) */
+        body.phase-TEAM_VOTING .player-seat.has-voted::after {
+            content: 'VOTED'; 
+            background-color: #198754; /* Bootstrap success green */
+        }
+
+        /* 3. Text and color for QUESTING (The team secretly chooses Success/Fail) */
+        body.phase-QUESTING .player-seat.has-voted::after {
+            content: 'SEALED'; 
+            background-color: #6c757d; /* Bootstrap secondary gray/slate for a secretive feel */
+        }        
 
         /* VOTING HISTORY TABLE */
         .history-table-wrapper { 
@@ -142,37 +152,36 @@
             background-color: transparent;
         }
 
-/* --- NEW: DIMENSION-SAFE STYLE FOR LOGGED-IN PLAYER (DARK SLATE) --- */
-.player-avatar.is-me {
-    border: 3px solid #343a40 !important; /* Deep Charcoal/Slate */
-    background-color: rgba(52, 58, 64, 0.05) !important; /* Very subtle grey tint */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft, natural drop shadow instead of a neon glow */
-}
+        /* --- NEW: DIMENSION-SAFE STYLE FOR LOGGED-IN PLAYER (DARK SLATE) --- */
+        .player-avatar.is-me {
+            border: 3px solid #343a40 !important; /* Deep Charcoal/Slate */
+            background-color: rgba(52, 58, 64, 0.05) !important; /* Very subtle grey tint */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft, natural drop shadow instead of a neon glow */
+        }
 
-/* Highlight the username box itself */
-.username-text.is-me-name {
-    background-color: #343a40 !important; /* Deep Charcoal */
-    border: 1px solid #212529;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
-    color: #ffffff !important; /* Crisp white text */
-    font-weight: 600;
-}
+        /* Highlight the username box itself */
+        .username-text.is-me-name {
+            background-color: #343a40 !important; /* Deep Charcoal */
+            border: 1px solid #212529;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+            color: #ffffff !important; /* Crisp white text */
+            font-weight: 600;
+        }
         
         body.phase-TEAM_BUILDING .player-seat.on-team .player-avatar,
         body.phase-TEAM_PROPOSAL .player-seat.on-team .player-avatar,
-        body.phase-TEAM_VOTING .player-seat.on-team .player-avatar {
-            background-color: #ffe066 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        }
-
+        body.phase-TEAM_VOTING .player-seat.on-team .player-avatar,
         body.phase-QUESTING .player-seat.on-team .player-avatar {
-            background-color: transparent !important; box-shadow: none !important;
+            background-color: #ffe066 !important; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         }
 
         .toy-icon { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)); transition: all 0.2s ease; }
         
         body.phase-TEAM_BUILDING .player-seat.on-team .toy-icon,
         body.phase-TEAM_PROPOSAL .player-seat.on-team .toy-icon,
-        body.phase-TEAM_VOTING .player-seat.on-team .toy-icon { 
+        body.phase-TEAM_VOTING .player-seat.on-team .toy-icon,
+        body.phase-QUESTING .player-seat.on-team .toy-icon { 
             transform: scale(1.1); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); 
         }
         
