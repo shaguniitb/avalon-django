@@ -21,42 +21,119 @@
         </div>
     </div>
 
-<div class="row">
-        <div class="col-md-8 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="mb-0">Available Lobbies</h3>
-                <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">Refresh List</a>
-            </div>
-            
-            {% if available_lobbies %}
-                <div class="list-group shadow-sm">
-                    {% for lobby in available_lobbies %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                            <div>
-                                <h4 class="mb-1 text-primary">Game hosted by {{ lobby.host.username }}</h4>
-                                <small class="text-secondary">
-                                    <strong>Players ({{ lobby.players.count }}/10):</strong> 
-                                    {% for p in lobby.players.all %}
-                                        {{ p.user.username }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </small>
-                            </div>
-                            
-                            <form method="POST">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="join">
-                                <input type="hidden" name="room_code" value="{{ lobby.room_code }}">
-                                <button type="submit" class="btn btn-primary btn-lg">Join</button>
-                            </form>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="alert alert-secondary text-center shadow-sm">
-                    No games are currently waiting for players. Be the first to start one!
-                </div>
-            {% endif %}
+    {% if active_game %}
+        <div class="alert alert-warning text-center shadow-sm mb-4 border-warning">
+            <h4 class="mb-2 text-dark">You are currently in an active game!</h4>
+            <a href="{% url 'game_room' active_game.room_code %}" class="btn btn-primary fw-bold px-4 rounded-pill">
+                <i class="bi bi-controller"></i> Rejoin Room {{ active_game.room_code }}
+            </a>
         </div>
+    {% endif %}    
+
+<div class="row">
+
+    <div class="col-md-8 mb-4">
+
+        <!-- AVAILABLE LOBBIES -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">Available Lobbies</h3>
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">
+                Refresh List
+            </a>
+        </div>
+
+        {% if available_lobbies %}
+            <div class="list-group shadow-sm mb-5">
+                {% for lobby in available_lobbies %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                        
+                        <div>
+                            <h4 class="mb-1 text-primary">
+                                Game hosted by {{ lobby.host.username }}
+                            </h4>
+
+                            <small class="text-secondary">
+                                <strong>Players ({{ lobby.players.count }}/10):</strong>
+
+                                {% for p in lobby.players.all %}
+                                    {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                        </div>
+
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="join">
+                            <input type="hidden" name="room_code" value="{{ lobby.room_code }}">
+
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                Join
+                            </button>
+                        </form>
+
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-secondary text-center shadow-sm mb-5">
+                No games are currently waiting for players.
+                Be the first to start one!
+            </div>
+        {% endif %}
+
+        <!-- ACTIVE GAMES -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">Games in Progress</h3>
+        </div>
+
+        {% if active_games %}
+            <div class="list-group shadow-sm">
+
+                {% for game in active_games %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+
+                        <div>
+                            <h4 class="mb-1 text-danger">
+                                Live Game hosted by {{ game.host.username }}
+                            </h4>
+
+                            <small class="text-secondary d-block">
+                                <strong>Players ({{ game.players.count }}/10):</strong>
+
+                                {% for p in game.players.all %}
+                                    {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+
+                            <small class="text-muted">
+                                Phase:
+                                <strong>{{ game.current_phase }}</strong>
+                            </small>
+                        </div>
+
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="spectate">
+                            <input type="hidden" name="room_code" value="{{ game.room_code }}">
+
+                            <button type="submit" class="btn btn-outline-danger btn-lg">
+                                Spectate
+                            </button>
+                        </form>
+
+                    </div>
+                {% endfor %}
+
+            </div>
+        {% else %}
+            <div class="alert alert-light border text-center shadow-sm">
+                No games are currently being played.
+            </div>
+        {% endif %}
+
+    </div>    
+
+
 
         <div class="col-md-4">
             <div class="card shadow-sm border-success">

@@ -7,7 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.db import transaction
-from .models import GameRoom, Player
+from django.db.models import Count
+from .models import GameRoom, Player, Spectator
 from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, reset_room_for_rematch
 
 from channels.layers import get_channel_layer
@@ -68,29 +69,82 @@ def home(request):
             room_code = request.POST.get("room_code")
             room = get_object_or_404(GameRoom, room_code=room_code)
 
-            # Security: Prevent joining twice in different browsers
+            # 1. RECONNECT LOGIC: Check if this user already exists in THIS room
             existing_player = Player.objects.filter(user=user, game=room).first()
-            if not existing_player:
-                Player.objects.create(user=user, game=room)
-                broadcast_game_update(room_code)
-                        
+            if existing_player:
+                messages.success(request, "Reconnected to your game!")
+                return redirect('game_room', room_code=room_code)
+                
+            # 2. NEW PLAYER LOGIC: Block joining if the game already started
+            if room.current_phase != 'LOBBY':
+                messages.error(request, "This game has already started. You cannot join mid-game.")
+                return redirect('home')
+
+            # Create new player
+            Player.objects.create(user=user, game=room)
+            broadcast_game_update(room_code)
+                    
             return redirect('game_room', room_code=room_code)
         
+        # --- ACTION 3: SPECTATE ---
+        elif action == "spectate":
+            room_code = request.POST.get("room_code")
+            room = get_object_or_404(GameRoom, room_code=room_code)
+
+            # Prevent active players from becoming spectators too
+            is_player = Player.objects.filter(user=user, game=room).exists()
+
+            if not is_player:
+                Spectator.objects.get_or_create(user=user, game=room)
+
+            return redirect('game_room', room_code=room_code)        
+        
     # Fetch all rooms that are currently waiting for players (LOBBY phase)
-    available_lobbies = GameRoom.objects.filter(current_phase='LOBBY').prefetch_related('players__user', 'host')
+    available_lobbies = GameRoom.objects.filter(
+        current_phase='LOBBY'
+        ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
+
+    active_games = GameRoom.objects.exclude(
+        current_phase='LOBBY'
+        ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
     
-    return render(request, 'game/home.html', {'available_lobbies': available_lobbies})
+    # Check if the current user is already in a game so we can show a "Rejoin" button
+    active_game = None
+    active_player = Player.objects.filter(user=request.user, game__is_active=True).first()
+    if active_player:
+        active_game = active_player.game
+    
+    return render(request, 'game/home.html', {
+        'available_lobbies': available_lobbies,
+        'active_games': active_games,
+        'active_game': active_game, # Pass the active game to the template
+    })
 
 
 @login_required
 def game_room(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
-    try:
-        player = Player.objects.get(user=request.user, game=room)
-    except Player.DoesNotExist:
-        return redirect('home')
+
+    player = Player.objects.filter(user=request.user, game=room).first()
+
+    is_spectator = False
+
+    if not player:
+        is_spectator = Spectator.objects.filter(
+            user=request.user,
+            game=room
+        ).exists()
+
+        if not is_spectator:
+            return redirect('home')
     
-    knowledge_data = get_player_knowledge(room, player)
+    if player:
+        knowledge_data = get_player_knowledge(room, player)
+    else:
+        knowledge_data = {
+            "text": "You are spectating this game.",
+            "ids": []
+        }        
     all_players = room.players.all().order_by('seat_order', 'id')
 
     proposals = room.history_proposals.prefetch_related('team', 'approves', 'rejects').order_by('id')
@@ -150,10 +204,14 @@ def game_room(request, room_code):
                 
             player_history.append({'player': p, 'votes': p_votes})            
 
+    # Fetch all spectators currently in the room
+    all_spectators = Spectator.objects.filter(game=room)
+
     context = {
         'room': room,
         'player': player,
         'all_players': all_players,
+        'spectators': all_spectators,
         'knowledge': knowledge_data["text"],
         'known_player_ids': knowledge_data["ids"],
         'mission_track': getattr(room, 'mission_track', None), 
@@ -161,6 +219,7 @@ def game_room(request, room_code):
         'history_headers': history_headers,
         'attempt_numbers': attempt_numbers,
         'player_history': player_history,
+        'is_spectator': is_spectator,
     }
     return render(request, 'game/room.html', context) 
 
@@ -189,6 +248,8 @@ def start_game(request, room_code):
 @require_POST
 def propose_team(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
+    if not Player.objects.filter(user=request.user, game=room).exists():
+        return redirect('game_room', room_code=room_code)
     player = get_object_or_404(Player, user=request.user, game=room)
 
     if player == room.current_leader:
@@ -206,6 +267,8 @@ def propose_team(request, room_code):
 @require_POST
 def cast_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
+    if not Player.objects.filter(user=request.user, game=room).exists():
+        return redirect('game_room', room_code=room_code)    
 
     with transaction.atomic():
         locked_room = GameRoom.objects.select_for_update().get(id=room.id)
@@ -250,6 +313,8 @@ def cast_vote(request, room_code):
 @require_POST
 def cast_quest_vote(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
+    if not Player.objects.filter(user=request.user, game=room).exists():
+        return redirect('game_room', room_code=room_code)    
     
     with transaction.atomic():
         locked_room = GameRoom.objects.select_for_update().get(id=room.id)
@@ -294,6 +359,9 @@ def cast_quest_vote(request, room_code):
 @require_POST
 def assassinate(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
+    if not Player.objects.filter(user=request.user, game=room).exists():
+        return redirect('game_room', room_code=room_code)
+
     player = get_object_or_404(Player, user=request.user, game=room)
 
     if room.current_phase == 'ASSASSIN_PHASE' and player.role == 'Assassin':
@@ -311,33 +379,58 @@ def assassinate(request, room_code):
 @login_required
 def leave_game(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
+
+    # --- 1. HANDLE SPECTATORS LEAVING ---
+    spectator = Spectator.objects.filter(user=request.user, game=room).first()
+    if spectator:
+        spectator.delete()
+        broadcast_game_update(room_code) # Instantly removes them from everyone's screen
+        return redirect('home')    
     
+    # --- 2. HANDLE PLAYERS LEAVING ---
     try:
-        player = Player.objects.get(user=request.user, game=room)
-
-        is_host = (request.user == room.host)
-
-        player.delete()
-
-        remaining_players = room.players.count()
-
-        # If nobody is left, clean up the room
-        if remaining_players == 0:
-            room.delete()
-            return redirect('home')
-
-        # If the host left, transfer host ownership
-        if is_host:
-            new_host = room.players.order_by('seat_order', 'id').first()
-
-            if new_host:
-                room.host = new_host.user
-                room.save()
-
-        broadcast_game_update(room_code)                        
-            
+        player = room.players.get(user=request.user)
     except Player.DoesNotExist:
-        pass
+        return redirect('home')
+
+    is_host = (room.host == request.user)
+
+    # 1. Break Foreign Key cycles manually to avoid SQLite IntegrityErrors!
+    if room.current_leader == player:
+        room.current_leader = None
+        room.save()
+        
+    # Remove player from the proposed team if they are on it
+    if player in room.proposed_team.all():
+        room.proposed_team.remove(player)
+        
+    # Clear any historical TeamProposal references to this player
+    player.history_led.update(leader=None)
+
+    # 2. Transfer host ownership
+    if is_host:
+        # EXCLUDE the leaving player so we don't accidentally make them the new host
+        new_host = room.players.exclude(id=player.id).order_by('seat_order', 'id').first()
+        if new_host:
+            room.host = new_host.user
+            room.save()
+        else:
+            # If no players are left, break the final cycle and delete the room
+            room.current_leader = None
+            room.save()
+            room.delete()
+            return redirect('home')            
+
+    # 3. Safe to delete the player now
+    player.delete()
+    
+    # 4. Check if the room is now completely empty. If so, delete it.
+    if not room.players.exists():
+        room.delete()
+        return redirect('home')
+    
+    # Broadcast to other players so their screens update
+    broadcast_game_update(room_code)
 
     return redirect('home')
 
@@ -360,6 +453,8 @@ def kick_player(request, room_code, player_id):
 @require_POST
 def toggle_player_selection(request, room_code, player_id):
     room = get_object_or_404(GameRoom, room_code=room_code)
+    if not Player.objects.filter(user=request.user, game=room).exists():
+        return redirect('game_room', room_code=room_code)    
     
     # Verify the requester is actually the host/leader
     if request.user != room.current_leader.user:
@@ -407,5 +502,25 @@ def play_again(request, room_code):
 
     # Refresh everyone instantly
     broadcast_game_update(room_code)
+
+    return redirect('game_room', room_code=room_code)
+
+@require_POST
+@login_required
+def end_game(request, room_code):
+    room = get_object_or_404(GameRoom, room_code=room_code)
+
+    # 1. Only the host can end the game early
+    if request.user != room.host:
+        messages.error(request, "Only the host can end the game early.")
+        return redirect('game_room', room_code=room_code)
+
+    # 2. Only run this if the game is actually in progress
+    if room.current_phase not in ['LOBBY', 'GOOD_WINS', 'EVIL_WINS']:
+        # We reuse your existing logic that resets the board for a rematch!
+        reset_room_for_rematch(room)
+        
+        # Broadcast the update so all players' screens instantly refresh to the lobby
+        broadcast_game_update(room_code)
 
     return redirect('game_room', room_code=room_code)

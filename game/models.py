@@ -130,3 +130,16 @@ class TeamProposal(models.Model):
     team = models.ManyToManyField('Player', related_name='history_team')
     approves = models.ManyToManyField('Player', related_name='history_approves')
     rejects = models.ManyToManyField('Player', related_name='history_rejects')
+
+class Spectator(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    game = models.ForeignKey(
+        GameRoom,
+        on_delete=models.CASCADE,
+        related_name='spectators'
+    )
+
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'game')    

@@ -236,11 +236,37 @@
     <div class="container" style="max-width: 950px;">
         
         <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-            <h1 class="h4 mb-0 fw-bold">Room: <span class="text-primary">{{ room.room_code }}</span></h1>
-            <form action="{% url 'leave_game' room.room_code %}" method="POST">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
-            </form>
+            <h1 class="h4 mb-0 fw-bold d-flex align-items-center gap-2">
+                Room: <span class="text-primary">{{ room.room_code }}</span>            
+            {% if request.user == room.host %}
+                <span class="badge bg-warning text-dark border border-dark rounded-pill shadow-sm ms-2 px-3 py-2">
+                    <i class="bi bi-star-fill"></i> You are the Host
+                </span>
+            </h1>                
+            {% endif %}
+
+            {% if is_spectator %}
+                <span class="badge bg-warning text-dark">
+                    SPECTATING
+                </span>
+            {% endif %}
+
+            <div class="d-flex align-items-center gap-2">
+                {% if request.user == room.host and room.current_phase != 'LOBBY' and room.current_phase != 'GOOD_WINS' and room.current_phase != 'EVIL_WINS' %}
+                    <form action="{% url 'end_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to end this game early? All progress will be lost and players will be returned to the lobby.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm fw-bold">End Game</button>
+                    </form>
+                {% endif %}
+    
+                {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' or is_spectator %}
+                    <form action="{% url 'leave_game' room.room_code %}" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
+                    </form>
+                {% endif %}
+            </div>
+       
         </div>
         
         {% if room.current_phase != 'LOBBY' %}
@@ -248,10 +274,20 @@
                 <strong style="color: black;">Roles in this Game:</strong> 
                 {% for role in room.roles_in_play %}
                     <span style="font-weight: bold; color: {% if role.is_evil %}red{% else %}blue{% endif %};">{{ role.name }}</span>{% if not forloop.last %}, {% endif %}
-                {% endfor %}
-                
-
+                {% endfor %}                
             </div>
+        {% if spectators %}
+        <div class="d-flex justify-content-center align-items-center flex-wrap gap-2 mt-4 mb-3">
+            <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 1px;">
+                <i class="bi bi-eye-fill"></i> Spectators:
+            </span>
+            {% for spec in spectators %}
+                <span class="badge bg-secondary rounded-pill shadow-sm px-3 py-1">
+                    {{ spec.user.username }}
+                </span>
+            {% endfor %}
+        </div>
+        {% endif %}                    
         {% endif %}        
 
         <div class="table-container">
@@ -454,6 +490,7 @@
             </div>
 
         {% else %}
+            {% if not is_spectator %}
             <div class="status-strip" id="main-action-strip">
                 
                 {% if room.current_phase == 'TEAM_BUILDING' or room.current_phase == 'TEAM_PROPOSAL' %}
@@ -642,6 +679,13 @@
                     <p class="status-text">Waiting for game to advance...</p>
                 {% endif %}
             </div>
+            {% else %}
+            <div class="status-strip">
+                <p class="status-text">
+                    You are spectating this game.
+                </p>
+            </div>
+            {% endif %}            
         {% endif %}
 
     </div>
