@@ -111,6 +111,8 @@ def home(request):
 
     active_games = GameRoom.objects.exclude(
         current_phase='LOBBY'
+        ).exclude(
+            players__user =request.user
         ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
     
     # Check if the current user is already in a game so we can show a "Rejoin" button
