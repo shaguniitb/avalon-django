@@ -5,6 +5,8 @@ class GameRoom(models.Model):
     room_code = models.CharField(max_length=6, unique=True)
     is_active = models.BooleanField(default=True)
 
+    allow_spectator_spoilers = models.BooleanField(default=False)
+
     # Game State Tracking
     # e.g., 'LOBBY', 'TEAM_BUILDING', 'TEAM_VOTING', 'QUESTING', 'ASSASSINATION', 'FINISHED'
     current_phase = models.CharField(max_length=20, default='LOBBY')

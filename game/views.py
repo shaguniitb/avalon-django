@@ -55,9 +55,12 @@ def home(request):
                 room_code = ''.join(random.choices(string.ascii_uppercase, k=5))
                 if not GameRoom.objects.filter(room_code=room_code).exists():
                     break
-            
+
+            # CATCH THE CHECKBOX DATA HERE
+            allow_spoilers = request.POST.get('allow_spoilers') == 'on'            
+
             # Create the room and add the host as the first player
-            room = GameRoom.objects.create(room_code=room_code, host=user)
+            room = GameRoom.objects.create(room_code=room_code, host=user, allow_spectator_spoilers=allow_spoilers)
             Player.objects.create(user=user, game=room)
             
             # Tell the lobby browser to update if anyone is looking at it
@@ -123,7 +126,13 @@ def home(request):
 
 @login_required
 def game_room(request, room_code):
-    room = get_object_or_404(GameRoom, room_code=room_code)
+    # Safely try to find the room
+    room = GameRoom.objects.filter(room_code=room_code).first()
+    
+    # If the room doesn't exist, send them to the lobby with a message
+    if not room:
+        messages.warning(request, "That game no longer exists.")
+        return redirect('home')    
 
     player = Player.objects.filter(user=request.user, game=room).first()
 
@@ -207,19 +216,29 @@ def game_room(request, room_code):
     # Fetch all spectators currently in the room
     all_spectators = Spectator.objects.filter(game=room)
 
+    spectator_spoilers = None
+
+    # Only generate spoilers IF they are a spectator, the host allowed it, and the game has started
+    if is_spectator and room.allow_spectator_spoilers and room.current_phase != 'LOBBY':
+        # Create a simple dictionary mapping usernames to their true roles
+        spectator_spoilers = {
+            p.user.username: p.role for p in all_players
+        }    
+
     context = {
         'room': room,
         'player': player,
         'all_players': all_players,
         'spectators': all_spectators,
-        'knowledge': knowledge_data["text"],
-        'known_player_ids': knowledge_data["ids"],
+        'knowledge': knowledge_data["text"] if knowledge_data else None,
+        'known_player_ids': knowledge_data["ids"] if knowledge_data else [],
         'mission_track': getattr(room, 'mission_track', None), 
         'hammer_player': getattr(room, 'hammer_player', None),   
         'history_headers': history_headers,
         'attempt_numbers': attempt_numbers,
         'player_history': player_history,
         'is_spectator': is_spectator,
+        'spectator_spoilers': spectator_spoilers,
     }
     return render(request, 'game/room.html', context) 
 
@@ -549,4 +568,33 @@ def end_game(request, room_code):
         # Broadcast the update so all players' screens instantly refresh to the lobby
         broadcast_game_update(room_code)
 
+    return redirect('game_room', room_code=room_code)
+
+@require_POST
+@login_required
+def join_as_player(request, room_code):
+    room = get_object_or_404(GameRoom, room_code=room_code)
+    
+    # 1. Prevent joining if the game has already started
+    if room.current_phase != 'LOBBY':
+        messages.error(request, "You can only join while in the lobby.")
+        return redirect('game_room', room_code=room_code)
+        
+    # 2. Check the Avalon player limit (Maximum 10 players)
+    if room.players.count() >= 10:
+        messages.error(request, "This room is full (maximum 10 players).")
+        return redirect('game_room', room_code=room_code)
+        
+    # 3. Find and delete their Spectator record
+    spectator = Spectator.objects.filter(user=request.user, game=room).first()
+    if spectator:
+        spectator.delete()
+        
+    # 4. Create their new Player record (if they aren't already one)
+    if not Player.objects.filter(user=request.user, game=room).exists():
+        Player.objects.create(user=request.user, game=room)
+        
+    # 5. Broadcast to the room so everyone's screen updates
+    broadcast_game_update(room_code)
+    
     return redirect('game_room', room_code=room_code)

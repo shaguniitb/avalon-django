@@ -21,23 +21,8 @@ class GameRoomConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
-
-        # --- Remove spectator if they disconnect/close tab ---
-        user = self.scope.get('user')
-        if user and user.is_authenticated:
-            # Check if this user was a spectator, and delete them if so
-            removed = await self.remove_spectator(user, self.room_code)
-            
-            if removed:
-                # If a spectator was successfully removed, broadcast to the room
-                # so all other players' screens instantly update to hide the spectator's name
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'game_update',
-                        'event_type': 'spectator_left',
-                    }
-                )        
+        
+        # REMOVE all the user/remove_spectator logic below this!        
 
     # Helper method to safely interact with the database asynchronously
     @database_sync_to_async

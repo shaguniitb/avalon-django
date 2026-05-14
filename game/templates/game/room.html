@@ -246,9 +246,18 @@
             {% endif %}
 
             {% if is_spectator %}
-                <span class="badge bg-warning text-dark">
-                    SPECTATING
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning text-dark"> SPECTATING </span>
+                    
+                    {% if room.current_phase == 'LOBBY' %}
+                        <form action="{% url 'join_as_player' room.room_code %}" method="POST" class="m-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm fw-bold">
+                                <i class="bi bi-person-plus-fill"></i> Join as Player
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
             {% endif %}
 
             <div class="d-flex align-items-center gap-2">
@@ -288,6 +297,35 @@
             {% endfor %}
         </div>
         {% endif %}                    
+        {% endif %}        
+
+        {% if spectator_spoilers %}
+        <div class="accordion mb-4 shadow-sm" id="accordionSpoilers">
+            <div class="accordion-item border-danger">
+                <h2 class="accordion-header" id="headingSpoilers">
+                    <button class="accordion-button collapsed bg-danger text-white fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSpoilers" aria-expanded="false" aria-controls="collapseSpoilers">
+                        <i class="bi bi-incognito me-2"></i> Spectator Cheat Sheet (Spoilers!)
+                    </button>
+                </h2>
+                <div id="collapseSpoilers" class="accordion-collapse collapse" aria-labelledby="headingSpoilers" data-bs-parent="#accordionSpoilers">
+                    <div class="accordion-body bg-light p-0">
+                        <ul class="list-group list-group-flush">
+                            {% for username, role in spectator_spoilers.items %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span class="fw-semibold">{{ username }}</span>
+                                    
+                                    {% if role == 'Merlin' or role == 'Percival' or role == 'Servant' %}
+                                        <span class="badge bg-primary rounded-pill px-3 py-2">{{ role }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger rounded-pill px-3 py-2">{{ role }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endif %}        
 
         <div class="table-container">
@@ -784,6 +822,8 @@
 
     </div>
     {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>    
 
     <script>
         if ("{{ room.current_phase }}" === "QUESTING") {

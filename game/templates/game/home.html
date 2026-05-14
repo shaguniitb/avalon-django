@@ -84,6 +84,7 @@
         </div>
 
         <!-- ACTIVE GAMES -->
+         <div id="active-games-container">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 class="mb-0">Games in Progress</h3>
         </div>
@@ -132,6 +133,7 @@
                 No games are currently being played.
             </div>
         {% endif %}
+        </div>
 
     </div>    
 
@@ -148,6 +150,14 @@
                     <form method="POST">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="create">
+
+                        <div class="form-check text-start mb-3 ms-2">
+                                <input class="form-check-input" type="checkbox" name="allow_spoilers" id="allowSpoilers">
+                                <label class="form-check-label text-muted small" for="allowSpoilers">
+                                    Allow spectators to see hidden roles
+                                </label>
+                        </div>                        
+
                         <button type="submit" class="btn btn-success w-100 btn-lg">
                             <i class="bi bi-plus-circle-fill"></i> Create Game
                         </button>
@@ -172,17 +182,21 @@
         fetch(window.location.href)
             .then(response => response.text())
             .then(html => {
-                // Parse the returned HTML string into a real DOM object
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Grab the fresh lobby container from the fetched page
+                // 1. Swap the Available Lobbies
                 const freshLobby = doc.getElementById('lobby-container');
                 const currentLobby = document.getElementById('lobby-container');
-                
-                // Swap the inner HTML smoothly
                 if (freshLobby && currentLobby) {
                     currentLobby.innerHTML = freshLobby.innerHTML;
+                }
+
+                // 2. Swap the Games in Progress
+                const freshActive = doc.getElementById('active-games-container');
+                const currentActive = document.getElementById('active-games-container');
+                if (freshActive && currentActive) {
+                    currentActive.innerHTML = freshActive.innerHTML;
                 }
             })
             .catch(error => console.error("Error fetching lobby updates:", error));
