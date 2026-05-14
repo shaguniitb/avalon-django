@@ -42,6 +42,7 @@
             </a>
         </div>
 
+        <div id="lobby-container">
         {% if available_lobbies %}
             <div class="list-group shadow-sm mb-5">
                 {% for lobby in available_lobbies %}
@@ -80,6 +81,7 @@
                 Be the first to start one!
             </div>
         {% endif %}
+        </div>
 
         <!-- ACTIVE GAMES -->
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -160,3 +162,29 @@
 
 </body>
 </html>
+
+<script>
+    // Set how often the lobby should refresh (in milliseconds)
+    const REFRESH_INTERVAL = 5000; // 5 seconds
+
+    setInterval(function() {
+        // Silently fetch the current URL (the home page)
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                // Parse the returned HTML string into a real DOM object
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Grab the fresh lobby container from the fetched page
+                const freshLobby = doc.getElementById('lobby-container');
+                const currentLobby = document.getElementById('lobby-container');
+                
+                // Swap the inner HTML smoothly
+                if (freshLobby && currentLobby) {
+                    currentLobby.innerHTML = freshLobby.innerHTML;
+                }
+            })
+            .catch(error => console.error("Error fetching lobby updates:", error));
+    }, REFRESH_INTERVAL);
+</script>
