@@ -46,29 +46,36 @@
         {% if available_lobbies %}
             <div class="list-group shadow-sm mb-5">
                 {% for lobby in available_lobbies %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3 mb-2 shadow-sm rounded border-start border-primary border-4">
                         
-                        <div>
-                            <h4 class="mb-1 text-primary">
+                        <div class="pe-3">
+                            <h4 class="mb-1 text-primary d-flex align-items-center gap-2">
                                 Game hosted by {{ lobby.host.username }}
+                                <span class="badge bg-secondary font-monospace" style="letter-spacing: 2px; font-size: 0.8rem;">
+                                    {{ lobby.room_code }}
+                                </span>
                             </h4>
 
-                            <small class="text-secondary">
-                                <strong>Players ({{ lobby.players.count }}/10):</strong>
-
-                                {% for p in lobby.players.all %}
-                                    {{ p.user.username }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
+                            <small class="text-secondary d-block mt-2">
+                                <strong class="text-dark">
+                                    <i class="bi bi-people-fill text-muted me-1"></i> 
+                                    Players ({{ lobby.players.count }}/10):
+                                </strong>
+                                <span class="text-muted fst-italic">
+                                    {% for p in lobby.players.all %}
+                                        {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
                             </small>
                         </div>
 
-                        <form method="POST">
+                        <form method="POST" class="m-0">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="join">
                             <input type="hidden" name="room_code" value="{{ lobby.room_code }}">
 
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                Join
+                            <button type="submit" class="btn btn-primary btn-lg fw-bold px-4" {% if lobby.players.count >= 10 %}disabled{% endif %}>
+                                <i class="bi bi-door-open-fill me-1"></i> Join
                             </button>
                         </form>
 
@@ -90,37 +97,45 @@
         </div>
 
         {% if active_games %}
-            <div class="list-group shadow-sm">
+            <div class="list-group shadow-sm border-0"> {% for game in active_games %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-3 mb-2 shadow-sm rounded border-start border-danger border-4">
 
-                {% for game in active_games %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-
-                        <div>
-                            <h4 class="mb-1 text-danger">
+                        <div class="pe-3">
+                            <h4 class="mb-1 text-danger d-flex align-items-center gap-2">
                                 Live Game hosted by {{ game.host.username }}
+                                <span class="badge bg-secondary font-monospace" style="letter-spacing: 2px; font-size: 0.8rem;">
+                                    {{ game.room_code }}
+                                </span>
                             </h4>
 
-                            <small class="text-secondary d-block">
-                                <strong>Players ({{ game.players.count }}/10):</strong>
-
-                                {% for p in game.players.all %}
-                                    {{ p.user.username }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
+                            <small class="text-secondary d-block mt-2">
+                                <strong class="text-dark">
+                                    <i class="bi bi-people-fill text-muted me-1"></i> 
+                                    Players ({{ game.players.count }}/10):
+                                </strong>
+                                <span class="text-muted fst-italic">
+                                    {% for p in game.players.all %}
+                                        {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
                             </small>
 
-                            <small class="text-muted">
-                                Phase:
-                                <strong>{{ game.current_phase }}</strong>
+                            <small class="text-muted d-block mt-1">
+                                <strong class="text-dark">
+                                    <i class="bi bi-controller text-muted me-1"></i>
+                                    Phase:
+                                </strong> 
+                                <span class="badge bg-danger bg-opacity-75 rounded-pill px-2">{{ game.current_phase }}</span>
                             </small>
                         </div>
 
-                        <form method="POST">
+                        <form method="POST" class="m-0">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="spectate">
                             <input type="hidden" name="room_code" value="{{ game.room_code }}">
 
-                            <button type="submit" class="btn btn-outline-danger btn-lg">
-                                Spectate
+                            <button type="submit" class="btn btn-outline-danger btn-lg fw-bold px-4">
+                                <i class="bi bi-eye-fill me-1"></i> Spectate
                             </button>
                         </form>
 
