@@ -21,4 +21,5 @@ urlpatterns = [
     path('room/<str:room_code>/play_again/', views.play_again, name='play_again'),
     path('room/<str:room_code>/end/', views.end_game, name='end_game'),
     path('room/<str:room_code>/join/', views.join_as_player, name='join_as_player'),
+    path('room/<str:room_code>/delete/', views.delete_game, name='delete_game'),
 ]

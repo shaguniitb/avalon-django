@@ -267,13 +267,33 @@
                         <button type="submit" class="btn btn-danger btn-sm fw-bold">End Game</button>
                     </form>
                 {% endif %}
-    
+
+                {% if request.user == room.host and not is_spectator %}
+                    {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' %}
+                        <form action="{% url 'delete_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to delete this game? All players will be kicked back to the lobby browser.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm fw-bold">Delete Game</button>
+                        </form>
+                    {% endif %}
+                {% endif %}                
+
                 {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' or is_spectator %}
+                    <form action="{% url 'leave_game' room.room_code %}" method="POST">
+                        {% csrf_token %}
+                        {% if request.user == room.host and not is_spectator %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Transfer hosting</button>
+                        {% else %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
+                        {% endif %}
+                    </form>
+                {% endif %}                
+    
+                <!-- {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' or is_spectator %}
                     <form action="{% url 'leave_game' room.room_code %}" method="POST">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
                     </form>
-                {% endif %}
+                {% endif %} -->
             </div>
        
         </div>
@@ -671,13 +691,28 @@
                                     Play Again
                                 </button>
                             </form>
+
+                            <form action="{% url 'delete_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to disband this lobby? All players will be kicked to the main menu.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-lg fw-bold">
+                                    <i class="bi bi-trash-fill"></i> Delete Game
+                                </button>
+                            </form>                            
+
                             {% endif %}
                             
                             <form action="{% url 'leave_game' room.room_code %}" method="POST">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
-                                    Return to Lobby
-                                </button>
+
+                                {% if player.user == room.host %}
+                                    <button type="submit" class="btn btn-outline-danger btn-lg fw-bold">
+                                        Transfer Hosting
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
+                                        Return to Lobby
+                                    </button>
+                                {% endif %}                                
                             </form>
                         </div>
 
@@ -702,14 +737,30 @@
                                     Play Again
                                 </button>
                             </form>
-                            {% endif %}
 
+                            <form action="{% url 'delete_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to disband this lobby? All players will be kicked to the main menu.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-lg fw-bold">
+                                    <i class="bi bi-trash-fill"></i> Delete Game
+                                </button>
+                            </form>                            
+
+                            {% endif %}
+                            
                             <form action="{% url 'leave_game' room.room_code %}" method="POST">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
-                                    Return to Lobby
-                                </button>
-                            </form>
+
+                                {% if player.user == room.host %}
+                                    <button type="submit" class="btn btn-outline-danger btn-lg fw-bold">
+                                        Transfer Hosting
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
+                                        Return to Lobby
+                                    </button>
+                                {% endif %}                                
+                            </form>                            
+
                         </div>
 
                     </div>

@@ -600,3 +600,23 @@ def join_as_player(request, room_code):
     broadcast_game_update(room_code)
     
     return redirect('game_room', room_code=room_code)
+
+@require_POST
+@login_required
+def delete_game(request, room_code):
+    room = get_object_or_404(GameRoom, room_code=room_code)
+
+    # Security check: Only the host can do this
+    if request.user != room.host:
+        messages.error(request, "Only the host can delete the game.")
+        return redirect('game_room', room_code=room_code)
+
+    # 1. Delete the room from the database
+    room.delete()
+
+    # 2. Broadcast the update. 
+    # Because the room no longer exists, when the clients reload, your game_room 
+    # view will automatically redirect them all to the lobby browser!
+    broadcast_game_update(room_code)
+
+    return redirect('home')
