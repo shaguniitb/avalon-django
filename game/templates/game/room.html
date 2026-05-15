@@ -119,9 +119,6 @@
                  
             vertical-align: middle;
         }
- 
-
-
         
 
         .table-container { 
@@ -230,6 +227,42 @@
             -webkit-font-smoothing: antialiased;
             letter-spacing: 0.5px;
         }        
+
+        /* --- MOBILE OPTIMIZATIONS --- */
+    @media (max-width: 576px) {
+        /* If your avatar background/border has a fixed size, shrink it here */
+        .player-avatar {
+            width: 70px !important; 
+            height: 70px !important;
+        }
+        
+        /* Scale down your specific emoji class */
+        .toy-icon {
+            font-size: 3.5rem !important;
+        }
+
+        /* Scale down your specific shield overlay class */
+        .shield-overlay {
+            font-size: 1.5rem !important;
+        }
+
+        /* Scale down the Voted/Sealed diagonal stamp so it fits the smaller avatar */
+        .player-seat.has-voted::after {
+            font-size: 0.8rem !important;
+            padding: 2px 8px !important;
+            letter-spacing: 1px !important;
+        }
+
+        .table-container {
+            height: auto !important; /* Remove the hardcoded 500px */
+            aspect-ratio: 1 / 1; /* Make it a perfect square matching screen width */
+            margin: 20px auto !important; /* Tighter margins on mobile */
+        }        
+
+        
+    }        
+
+
     </style>
 </head>
 <body class="py-4 phase-{{ room.current_phase }}">
@@ -242,7 +275,7 @@
         </form>
     </div>    
 
-    <div class="container" style="max-width: 950px;">
+    <div class="container mt-2 mt-md-5 px-1 px-sm-3" style="max-width: 950px;">        
         
         <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
             <h1 class="h4 mb-0 fw-bold d-flex align-items-center gap-2">
@@ -308,8 +341,8 @@
         </div>
         
         {% if room.current_phase != 'LOBBY' %}
-            <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ddd;">
-                <strong style="color: black;">Roles in this Game:</strong> 
+            <div class="bg-light p-3 rounded mb-4 border">
+                <strong class="text-dark">Roles in this Game:</strong> 
                 {% for role in room.roles_in_play %}
                     <span style="font-weight: bold; color: {% if role.is_evil %}red{% else %}blue{% endif %};">{{ role.name }}</span>{% if not forloop.last %}, {% endif %}
                 {% endfor %}                
@@ -883,86 +916,14 @@
     </div>
     {% endif %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>    
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>   
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <script>
-        if ("{{ room.current_phase }}" === "QUESTING") {
-            if (sessionStorage.getItem('quest_approved_seen_{{ room.current_round }}') === 'true') {
-                const step1 = document.getElementById('quest-approval-step');
-                const step2 = document.getElementById('quest-action-step');
-                if (step1 && step2) {
-                    step1.classList.remove('d-flex');
-                    step1.classList.add('d-none');
-                    
-                    step2.classList.remove('d-none');
-                    step2.classList.add('d-flex');
-                }
-            }
-        }
-    </script>
-
-    <script>
-        function positionPlayers() {
-            const container = document.querySelector('.table-container');
-            const seats = document.querySelectorAll('.player-seat');
-            if (!container || seats.length === 0) return;
-            
-            const radiusX = container.offsetWidth * 0.45; 
-            const radiusY = container.offsetHeight * 0.38; 
-
-            seats.forEach((seat) => {
-                const index = parseInt(seat.getAttribute('data-index'));
-                const total = parseInt(seat.getAttribute('data-total'));
-                const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-                seat.style.left = `${(container.offsetWidth/2) + radiusX * Math.cos(angle)}px`;
-                seat.style.top = `${(container.offsetHeight/2) + radiusY * Math.sin(angle)}px`;
-            });
-        }
-        
-        function updateProposeButton() {
-            const btn = document.getElementById('propose-team-btn');
-            if (btn) {
-                const selectedCount = document.querySelectorAll('.player-seat.on-team').length;
-                let requiredSize = 0;
-                const pCount = parseInt("{{ all_players.count }}");
-                const rNum = parseInt("{{ room.current_round }}");
-                
-                if (rNum === 1) requiredSize = (pCount < 8) ? 2 : 3;
-                else if (rNum === 2) requiredSize = (pCount < 8) ? 3 : 4;
-                else if (rNum === 3) requiredSize = (pCount === 5) ? 2 : ((pCount === 7) ? 3 : 4);
-                else if (rNum === 4) requiredSize = (pCount < 7) ? 3 : ((pCount === 7) ? 4 : 5);
-                else if (rNum === 5) requiredSize = (pCount === 5) ? 3 : ((pCount < 8) ? 4 : 5);
-
-                btn.disabled = (selectedCount !== requiredSize);
-            }
-        }
-
-        function handleAvatarClick(playerId) {
-            const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
-            const phase = "{{ room.current_phase }}";
-            if (!isLeader || (phase !== "TEAM_PROPOSAL" && phase !== "TEAM_BUILDING")) return;
-            
-            const avatar = document.getElementById(`avatar-${playerId}`);
-            const seat = avatar.closest('.player-seat');
-            seat.classList.toggle('on-team');
-            updateProposeButton();
-
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            
-            fetch(`/room/{{ room.room_code }}/toggle_player/${playerId}/`, {
-                method: 'POST',
-                headers: { 
-                    'X-CSRFToken': csrfToken, 
-                    'Content-Type': 'application/json', 
-                    'X-Requested-With': 'XMLHttpRequest' 
-                }
-            }).catch(err => console.error("Fetch error:", err));
-        }
-
-        function showQuestAction() {
+<script>
+    if ("{{ room.current_phase }}" === "QUESTING") {
+        if (sessionStorage.getItem('quest_approved_seen_{{ room.current_round }}') === 'true') {
             const step1 = document.getElementById('quest-approval-step');
             const step2 = document.getElementById('quest-action-step');
-            
             if (step1 && step2) {
                 step1.classList.remove('d-flex');
                 step1.classList.add('d-none');
@@ -970,44 +931,148 @@
                 step2.classList.remove('d-none');
                 step2.classList.add('d-flex');
             }
-            
-            sessionStorage.setItem('quest_approved_seen_{{ room.current_round }}', 'true');
         }
+    }
+    
+    function positionPlayers() {
+        const container = document.querySelector('.table-container');
+        const seats = document.querySelectorAll('.player-seat');
+        if (!container || seats.length === 0) return;
+        
+        const containerWidth = container.offsetWidth;
+        const containerHeight = container.offsetHeight;
+        
+        // 1. Find the absolute center
+        const centerX = containerWidth / 2;
+        const centerY = containerHeight / 2; 
+        
+        // 2. Define the absolute maximum safe distance from the center
+        const avatarSize = window.innerWidth < 576 ? 70 : 100; 
+        const maxSafeX = centerX - (avatarSize / 2) - 10; // 10px safety padding
+        const maxSafeY = centerY - (avatarSize / 2) - 10;
 
-        // NEW: Restore checkboxes if we are in the lobby (Added roleLovers to the list)
-        window.addEventListener('load', () => {
-            positionPlayers();
-            updateProposeButton();
+        // 3. Calculate your preferred oval shape
+        const desiredRadiusX = containerWidth * 0.45;
+        const desiredRadiusY = containerHeight * 0.38;
+
+        // 4. Determine if the oval is too big for the container
+        const scaleX = maxSafeX / desiredRadiusX;
+        const scaleY = maxSafeY / desiredRadiusY;
+        
+        // 5. Pick the strictest scale constraint. 
+        // If the oval fits perfectly, scale is 1. If it's too big, scale shrinks it proportionally.
+        const scale = Math.min(1, scaleX, scaleY);
+        
+        // Apply the safe scale to your oval
+        const finalRadiusX = desiredRadiusX * scale;
+        const finalRadiusY = desiredRadiusY * scale;
+
+        seats.forEach((seat) => {
+            const index = parseInt(seat.getAttribute('data-index'));
+            const total = parseInt(seat.getAttribute('data-total'));
+            const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
             
-            if ("{{ room.current_phase }}" === "LOBBY") {
-                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon', 'roleLovers'];
-                roles.forEach(id => {
-                    const cb = document.getElementById(id);
-                    if (cb && sessionStorage.getItem(id) === 'true') {
-                        cb.checked = true;
-                    }
-                });
-            }
+            // Draw the perfectly scaled oval
+            seat.style.position = 'absolute';
+            seat.style.left = `${centerX + finalRadiusX * Math.cos(angle)}px`;
+            seat.style.top = `${centerY + finalRadiusY * Math.sin(angle)}px`;
         });
+    }        
+    
+    function updateProposeButton() {
+        const btn = document.getElementById('propose-team-btn');
+        if (btn) {
+            const selectedCount = document.querySelectorAll('.player-seat.on-team').length;
+            let requiredSize = 0;
+            const pCount = parseInt("{{ all_players.count }}");
+            const rNum = parseInt("{{ room.current_round }}");
+            
+            if (rNum === 1) requiredSize = (pCount < 8) ? 2 : 3;
+            else if (rNum === 2) requiredSize = (pCount < 8) ? 3 : 4;
+            else if (rNum === 3) requiredSize = (pCount === 5) ? 2 : ((pCount === 7) ? 3 : 4);
+            else if (rNum === 4) requiredSize = (pCount < 7) ? 3 : ((pCount === 7) ? 4 : 5);
+            else if (rNum === 5) requiredSize = (pCount === 5) ? 3 : ((pCount < 8) ? 4 : 5);
 
-        // NEW: Save checkboxes right before the page auto-reloads
-        window.addEventListener('beforeunload', () => {
-            if ("{{ room.current_phase }}" === "LOBBY") {
-                const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon', 'roleLovers'];
-                roles.forEach(id => {
-                    const cb = document.getElementById(id);
-                    if (cb) {
-                        sessionStorage.setItem(id, cb.checked);
-                    }
-                });
+            btn.disabled = (selectedCount !== requiredSize);
+        }
+    }
+
+    function handleAvatarClick(playerId) {
+        const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
+        const phase = "{{ room.current_phase }}";
+        if (!isLeader || (phase !== "TEAM_PROPOSAL" && phase !== "TEAM_BUILDING")) return;
+        
+        const avatar = document.getElementById(`avatar-${playerId}`);
+        const seat = avatar.closest('.player-seat');
+        seat.classList.toggle('on-team');
+        updateProposeButton();
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch(`/room/{{ room.room_code }}/toggle_player/${playerId}/`, {
+            method: 'POST',
+            headers: { 
+                'X-CSRFToken': csrfToken, 
+                'Content-Type': 'application/json', 
+                'X-Requested-With': 'XMLHttpRequest' 
             }
-        });
+        }).then(response => {
+            if (!response.ok) throw new Error("Server rejected toggle");                
+        }).catch(err => {
+            console.error("Fetch error, reverting UI:", err);
+            // 2. Undo the toggle if the server fails to update!
+            seat.classList.toggle('on-team'); 
+            updateProposeButton();
+        });                
 
-        window.addEventListener('resize', positionPlayers);
+    }
 
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script>
+    function showQuestAction() {
+        const step1 = document.getElementById('quest-approval-step');
+        const step2 = document.getElementById('quest-action-step');
+        
+        if (step1 && step2) {
+            step1.classList.remove('d-flex');
+            step1.classList.add('d-none');
+            
+            step2.classList.remove('d-none');
+            step2.classList.add('d-flex');
+        }
+        
+        sessionStorage.setItem('quest_approved_seen_{{ room.current_round }}', 'true');
+    }
+
+    // NEW: Restore checkboxes if we are in the lobby (Added roleLovers to the list)
+    window.addEventListener('load', () => {
+        positionPlayers();
+        updateProposeButton();
+        
+        if ("{{ room.current_phase }}" === "LOBBY") {
+            const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon', 'roleLovers'];
+            roles.forEach(id => {
+                const cb = document.getElementById(id);
+                if (cb && sessionStorage.getItem(id) === 'true') {
+                    cb.checked = true;
+                }
+            });
+        }
+    });
+
+    // NEW: Save checkboxes right before the page auto-reloads
+    window.addEventListener('beforeunload', () => {
+        if ("{{ room.current_phase }}" === "LOBBY") {
+            const roles = ['rolePercival', 'roleMorgana', 'roleMordred', 'roleOberon', 'roleLovers'];
+            roles.forEach(id => {
+                const cb = document.getElementById(id);
+                if (cb) {
+                    sessionStorage.setItem(id, cb.checked);
+                }
+            });
+        }
+    });
+
+    window.addEventListener('resize', positionPlayers);
+
     function celebrate() {
         const phase = "{{ room.current_phase }}";
         
@@ -1063,14 +1128,14 @@
 
             if (distance < 0) {
                 clearInterval(timerInterval);
-                document.getElementById("timer-display").innerHTML = "00:00 - Time is up!";
+                myElement.innerHTML = "00:00 - Time is up!";
                 return;
             }
 
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-            document.getElementById("timer-display").innerHTML = 
+            myElement.innerHTML = 
                 (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
         }, 1000);
     }
