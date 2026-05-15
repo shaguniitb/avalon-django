@@ -259,6 +259,26 @@
             margin: 20px auto !important; /* Tighter margins on mobile */
         }        
 
+        /* 1. Scale down the entire center dashboard so it doesn't overlap the avatars */
+        #center-info {
+            /* Retain the centering transform, but add a scale factor */
+            transform: translate(-50%, -50%) scale(0.75) !important;
+            /* Prevent the flexbox from forcefully wrapping the squares to a new line */
+            width: max-content; 
+        }
+
+        /* 2. Shrink the mission squares slightly */
+        .mission-square {
+            width: 35px !important;
+            height: 35px !important;
+            font-size: 1.1rem !important;
+        }
+
+        /* 3. Reduce the Bootstrap gap spacing between the squares */
+        #center-info .gap-3 {
+            gap: 0.5rem !important;
+        }        
+
         
     }        
 
@@ -1236,7 +1256,7 @@
                 }
 
                 console.log("Update received! Reloading...");
-                window.location.reload();
+                window.location.href = window.location.href;                
             }
         };        
 
@@ -1252,6 +1272,14 @@
 
     // Initialize the connection when the page loads
     connectWebSocket();    
+
+    document.addEventListener("visibilitychange", function() {
+        if (document.visibilityState === 'visible') {
+            console.log("App returned to foreground, refreshing state...");
+            const path = window.location.origin + window.location.pathname;
+            window.location.href = path + '?t=' + new Date().getTime(); 
+        }
+    });
 
 
 </script>
