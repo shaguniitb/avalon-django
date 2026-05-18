@@ -20,6 +20,18 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 class QuestingE2ETests(ChannelsLiveServerTestCase):
     
+    port = 8082 
+
+    @classmethod
+    def setUpClass(cls):
+        # 2. Explicitly sever any lingering database connections from previous tests 
+        # before spinning up the new multiprocessing Daphne server
+        from django.db import connections
+        connections.close_all()
+        
+        super().setUpClass()
+
+
     def setUp(self):
         self.users = [User.objects.create_user(username=f"q_player_{i}", password="pw") for i in range(1, 6)]
         self.room = GameRoom.objects.create(room_code="QST5P", host=self.users[0])
