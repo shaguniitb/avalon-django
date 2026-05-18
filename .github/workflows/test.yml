@@ -45,5 +45,6 @@ jobs:
         # We need to provide dummy environment variables so Django's settings.py doesn't crash
         DJANGO_SECRET_KEY: 'test-secret-key-do-not-use-in-production'
         DEBUG: 'True'
+        DATABASE_URL: 'sqlite:///db.sqlite3'
       run: |
         python -m pytest
