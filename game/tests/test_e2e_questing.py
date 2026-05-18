@@ -9,27 +9,34 @@ TEST_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_db
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 @override_settings(
-    DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': TEST_DB_PATH}},
+    DATABASES={
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': TEST_DB_PATH,
+            # CRITICAL FIX 1: Explicitly tell the test runner to use the physical file
+            'TEST': {
+                'NAME': TEST_DB_PATH, 
+            }
+        }
+    },
     CHANNEL_LAYERS={
         'default': {
             'BACKEND': 'channels.layers.InMemoryChannelLayer'
         }
     }
-
-    )
-
+)
 class QuestingE2ETests(ChannelsLiveServerTestCase):
     
     port = 8082 
 
     @classmethod
     def setUpClass(cls):
-        # 2. Explicitly sever any lingering database connections from previous tests 
-        # before spinning up the new multiprocessing Daphne server
-        from django.db import connections
-        connections.close_all()
-        
+        # CRITICAL FIX 2: Remove the connections.close_all() hack.
+        # Let ChannelsLiveServerTestCase handle the DB connections naturally.
         super().setUpClass()
+
+    def setUp(self):
+        # ... your existing setup logic ...
 
 
     def setUp(self):
