@@ -33,6 +33,13 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 
+# Tell Django to redirect to the home dashboard after login
+LOGIN_REDIRECT_URL = '/'
+
+# Tell Django to redirect to the login page after they log out
+LOGOUT_REDIRECT_URL = '/login/'
+
+
 ALLOWED_HOSTS = ["*", "avalon.shagunjhaver.com"]
 # ALLOWED_HOSTS = [os.environ.get("RAILWAY_STATIC_URL"), "localhost", "127.0.0.1"]
 
@@ -104,6 +111,12 @@ DATABASES = {
         default=os.environ.get("DATABASE_URL")
     )
 }
+
+# Force SQLite to use a file-based database for tests (required by Channels)
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.sqlite3':
+    DATABASES['default']['TEST'] = {
+        'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
+    }
 
 
 # Password validation

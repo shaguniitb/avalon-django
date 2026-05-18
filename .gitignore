@@ -16,3 +16,6 @@ media/
 staticfiles/
 
 .DS_Store
+
+# Ignore local test databases
+test_db.sqlite3
