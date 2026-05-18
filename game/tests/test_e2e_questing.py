@@ -36,10 +36,6 @@ class QuestingE2ETests(ChannelsLiveServerTestCase):
         super().setUpClass()
 
     def setUp(self):
-        # ... your existing setup logic ...
-
-
-    def setUp(self):
         self.users = [User.objects.create_user(username=f"q_player_{i}", password="pw") for i in range(1, 6)]
         self.room = GameRoom.objects.create(room_code="QST5P", host=self.users[0])
         for user in self.users:
