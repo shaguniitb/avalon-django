@@ -107,6 +107,7 @@ def tally_team_votes(game_room, votes):
         
         if game_room.failed_votes >= 5:
             game_room.current_phase = 'EVIL_WINS' 
+            game_room.victory_reason = '5_FAILED_VOTES'
         else:
             current_seat = game_room.current_leader.seat_order
             total_players = game_room.players.count()
