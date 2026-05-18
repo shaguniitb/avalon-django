@@ -167,7 +167,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ASGI_APPLICATION = 'avalon_project.asgi.application'
 
 # Dynamically switch WebSocket backends based on the environment
-if DEBUG:
+if DEBUG or os.environ.get("GITHUB_ACTIONS") == "true":
     # Use Local Memory for your computer
     CHANNEL_LAYERS = {
         'default': {
