@@ -8,7 +8,16 @@ from game.models import GameRoom, Player
 TEST_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_db_questing.sqlite3")
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
-@override_settings(DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': TEST_DB_PATH}})
+@override_settings(
+    DATABASES={'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': TEST_DB_PATH}},
+    CHANNEL_LAYERS={
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        }
+    }
+
+    )
+
 class QuestingE2ETests(ChannelsLiveServerTestCase):
     
     def setUp(self):

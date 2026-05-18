@@ -19,6 +19,11 @@ TEST_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_db
                 'NAME': TEST_DB_PATH,
             }
         }
+    },
+    CHANNEL_LAYERS={
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        }
     }
 )
 class GameplayE2ETests(ChannelsLiveServerTestCase):
