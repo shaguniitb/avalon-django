@@ -113,6 +113,7 @@ class Player(models.Model):
     has_quest_voted = models.BooleanField(default=False)
     quest_vote_success = models.BooleanField(null=True, blank=True)
     last_vote = models.CharField(max_length=10, null=True, blank=True)
+    pending_message = models.CharField(max_length=255, null=True, blank=True)
 
 class Mission(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='missions')

@@ -381,6 +381,26 @@
         {% endif %}                    
         {% endif %}        
 
+        <div class="container mt-3" id="message-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show" role="alert">
+                    {% if message.tags == 'success' %}
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                    {% elif message.tags == 'error' or message.tags == 'danger' %}
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {% else %}
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                    {% endif %}
+                    
+                    <strong>{{ message }}</strong>
+                    
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        </div>
+
         {% if spectator_spoilers %}
         <div class="accordion mb-4 shadow-sm" id="accordionSpoilers">
             <div class="accordion-item border-danger">

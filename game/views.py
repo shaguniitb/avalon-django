@@ -151,6 +151,12 @@ def game_room(request, room_code):
         if not is_spectator:
             return redirect('home')
     
+    if player and player.pending_message:
+        messages.success(request, player.pending_message)
+        player.pending_message = None
+        player.save(update_fields=['pending_message'])
+
+
     if player:
         knowledge_data = get_player_knowledge(room, player)
     else:
@@ -258,6 +264,8 @@ def start_game(request, room_code):
             
             # Pass the dynamic list to your logic engine
             start_game_and_assign_roles(room, special_roles=selected_roles)
+
+            room.players.all().update(pending_message="The game has begun! Check your secret role.")
             
             # Broadcast the update so everyone's screen refreshes
             broadcast_game_update(room_code)
