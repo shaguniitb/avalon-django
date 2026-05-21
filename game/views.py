@@ -167,6 +167,18 @@ def game_room(request, room_code):
         }        
     all_players = room.players.all().order_by('seat_order', 'id')
 
+    lady_chain = []
+    if room.use_lady_of_the_lake and room.current_lady_holder:
+        curr = room.current_lady_holder
+        
+        # Walk backwards up the chain using the reverse ForeignKey manager!
+        while curr:
+            lady_chain.append(curr.user.username)
+            curr = curr.lady_received_from.first()
+            
+        # Reverse the list so it displays in chronological forward order
+        lady_chain.reverse()
+
     proposals = room.history_proposals.prefetch_related('team', 'approves', 'rejects').order_by('id')
 
     history_headers = []
@@ -272,6 +284,7 @@ def game_room(request, room_code):
         'spectator_spoilers': spectator_spoilers,
         'is_lady_turn': is_lady_turn,
         'past_lady_ids': past_lady_ids,
+        'lady_chain': lady_chain,
     }
     return render(request, 'game/room.html', context) 
 

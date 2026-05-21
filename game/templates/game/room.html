@@ -381,6 +381,25 @@
         {% endif %}                    
         {% endif %}        
 
+
+        {% if lady_chain|length > 1 %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info py-2 mb-0 text-center shadow-sm border-info border-opacity-50">
+                        <strong class="text-info-emphasis">🧜‍♀️ Lady of the Lake Chain</strong><br>
+                        <div class="mt-1">
+                            {% for name in lady_chain %}
+                                <span class="fw-bold">{{ name }}</span>
+                                {% if not forloop.last %}
+                                    <i class="bi bi-arrow-right mx-2 text-secondary"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}                        
+
         <div class="container mt-3" id="message-container">
         {% if messages %}
             {% for message in messages %}
