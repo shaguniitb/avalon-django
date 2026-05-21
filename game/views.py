@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
+from django.http import JsonResponse, request
 from django.db import transaction
 from django.db.models import Count
 from .models import GameRoom, Player, Spectator
@@ -414,6 +414,7 @@ def cast_quest_vote(request, room_code):
     return redirect('game_room', room_code=room_code)
 
 @require_POST
+@login_required
 def assassinate(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
     if not Player.objects.filter(user=request.user, game=room).exists():
@@ -424,10 +425,19 @@ def assassinate(request, room_code):
     if room.current_phase == 'ASSASSIN_PHASE' and player.role == 'Assassin':
         # Get all selected checkboxes from the form
         target_ids = request.POST.getlist('assassin_targets')
+        target_players = Player.objects.filter(id__in=target_ids, game=room)
+
+        if not target_players.exists():
+            messages.error(request, "Please select a valid target for assassination.")
+            return redirect('game_room', room_code=room_code)        
+        
+        target_names = " and ".join([p.user.username for p in target_players])
         
         # Ensure they picked either exactly 1 or exactly 2 people
         if len(target_ids) in [1, 2]:
             attempt_assassination(room, target_ids)
+            msg_text = f"Assassination strike locked in! The Assassin has targeted: {target_names}."
+            room.players.all().update(pending_message=msg_text)
             broadcast_game_update(room_code) # If using channels
             
     return redirect('game_room', room_code=room_code)
