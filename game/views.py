@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse, request
 from django.db import transaction
 from django.db.models import Count
+from django.db import models
 from .models import GameRoom, Player, Spectator
 from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, reset_room_for_rematch
 
@@ -235,6 +236,26 @@ def game_room(request, room_code):
             p.user.username: p.role for p in all_players
         }    
 
+    is_lady_turn = False
+    past_lady_ids = []
+
+    if room.use_lady_of_the_lake and room.current_lady_holder:
+        # 1. Who has held it? 
+        # Anyone who has passed it (has a lady_target) OR currently holds it.
+        past_holders = Player.objects.filter(game=room).filter(
+            models.Q(lady_target__isnull=False) | models.Q(id=room.current_lady_holder.id)
+        )
+        past_lady_ids = list(past_holders.values_list('id', flat=True))
+
+        # 2. Is it time to use it? (Start of Rounds 3, 4, 5 during TEAM_BUILDING)
+        if room.current_phase == 'TEAM_BUILDING' and room.current_round in [3, 4, 5]:
+            times_used = Player.objects.filter(game=room, lady_target__isnull=False).count()
+            expected_uses = room.current_round - 2
+            
+            # E.g., In Round 3, expected_uses is 1. If times_used is 0, the Lady MUST act.
+            if times_used < expected_uses:
+                is_lady_turn = True    
+
     context = {
         'room': room,
         'player': player,
@@ -249,6 +270,8 @@ def game_room(request, room_code):
         'player_history': player_history,
         'is_spectator': is_spectator,
         'spectator_spoilers': spectator_spoilers,
+        'is_lady_turn': is_lady_turn,
+        'past_lady_ids': past_lady_ids,
     }
     return render(request, 'game/room.html', context) 
 
@@ -261,9 +284,19 @@ def start_game(request, room_code):
 
             # Dynamically grab the list of checked roles from the form
             selected_roles = request.POST.getlist('special_roles')
+            use_lady = request.POST.get('use_lady') == 'on'
+
+            room.players.all().update(lady_target=None)
             
             # Pass the dynamic list to your logic engine
             start_game_and_assign_roles(room, special_roles=selected_roles)
+
+            # --- LADY INITIALIZATION ---
+            room.use_lady_of_the_lake = use_lady
+            if use_lady:
+                last_player = room.players.order_by('seat_order').last()
+                room.current_lady_holder = last_player
+            room.save()
 
             room.players.all().update(pending_message="The game has begun! Check your secret role.")
             
@@ -277,8 +310,17 @@ def start_game(request, room_code):
     return redirect('game_room', room_code=room_code)
 
 @require_POST
+@login_required
 def propose_team(request, room_code):
     room = get_object_or_404(GameRoom, room_code=room_code)
+
+    # --- STRICT TIMING ENFORCEMENT ---
+    if room.use_lady_of_the_lake and room.current_phase == 'TEAM_BUILDING' and room.current_round in [3, 4, 5]:
+        times_used = Player.objects.filter(game=room, lady_target__isnull=False).count()
+        if times_used < (room.current_round - 2):
+            messages.error(request, "The Lady of the Lake must be used before a new team can be proposed.")
+            return redirect('game_room', room_code=room_code)
+
     if not Player.objects.filter(user=request.user, game=room).exists():
         return redirect('game_room', room_code=room_code)
     player = get_object_or_404(Player, user=request.user, game=room)
@@ -640,3 +682,56 @@ def delete_game(request, room_code):
     broadcast_game_update(room_code)
 
     return redirect('home')
+
+@require_POST
+@login_required
+def use_lady(request, room_code):
+    room = get_object_or_404(GameRoom, room_code=room_code)
+    player = Player.objects.filter(user=request.user, game=room).first()
+    
+    # Check if it's legally the Lady's turn
+    if room.current_phase != 'TEAM_BUILDING' or room.current_round not in [3, 4, 5]:
+        messages.error(request, "It is not the correct phase to use the Lady of the Lake.")
+        return redirect('game_room', room_code=room_code)
+
+    times_used = Player.objects.filter(game=room, lady_target__isnull=False).count()
+    if times_used >= (room.current_round - 2):
+        messages.error(request, "The Lady of the Lake has already been used this round.")
+        return redirect('game_room', room_code=room_code)
+
+    if player != room.current_lady_holder:
+        messages.error(request, "You do not possess the Lady of the Lake.")
+        return redirect('game_room', room_code=room_code)
+        
+    target_id = request.POST.get('lady_target')
+    target_player = Player.objects.filter(id=target_id, game=room).first()
+    
+    if not target_player:
+        messages.error(request, "Invalid target selected.")
+        return redirect('game_room', room_code=room_code)
+        
+    # Rule Check: Target cannot be the current holder or anyone who has passed it
+    if target_player == room.current_lady_holder or target_player.lady_target is not None:
+        messages.error(request, "This player has already held the Lady.")
+        return redirect('game_room', room_code=room_code)
+        
+    # 1. Update the ForeignKeys to build the chain
+    player.lady_target = target_player
+    player.save(update_fields=['lady_target'])
+    
+    room.current_lady_holder = target_player
+    room.save(update_fields=['current_lady_holder'])
+
+    # 2. Send the private result to the person who checked using pending_message
+    alignment = "GOOD" if target_player.is_good else "EVIL"
+    player.pending_message = f"🧜‍♀️ The Lady reveals that {target_player.user.username}'s alignment is {alignment}!"
+    player.save(update_fields=['pending_message'])
+    
+    # 3. Broadcast public generic alert to the rest of the room
+    room.players.exclude(id=player.id).update(
+        pending_message=f"🧜‍♀️ {player.user.username} used the Lady of the Lake on {target_player.user.username}."
+    )
+    
+    broadcast_game_update(room_code)
+    return redirect('game_room', room_code=room_code)
+    

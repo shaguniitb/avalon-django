@@ -24,6 +24,10 @@ class GameRoom(models.Model):
     victory_reason = models.CharField(max_length=50, null=True, blank=True)
     assassination_start_time = models.DateTimeField(null=True, blank=True)
 
+    use_lady_of_the_lake = models.BooleanField(default=False)
+    # Tracks the person currently holding the token
+    current_lady_holder = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_lady_room')
+
     @property
     def hammer_player(self):
         """Calculates and returns the player who holds the hammer for the 5th vote."""
@@ -114,6 +118,9 @@ class Player(models.Model):
     quest_vote_success = models.BooleanField(null=True, blank=True)
     last_vote = models.CharField(max_length=10, null=True, blank=True)
     pending_message = models.CharField(max_length=255, null=True, blank=True)
+    # Self-referencing FK: Tracks who this player used the Lady on. 
+    # This naturally builds the chain! (Player A -> Player B -> Player C)
+    lady_target = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='lady_received_from')
 
 class Mission(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='missions')

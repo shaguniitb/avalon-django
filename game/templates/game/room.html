@@ -527,6 +527,13 @@
                         {% if p == hammer_player %}
                             <span class="hammer-icon">🔨</span>
                         {% endif %}
+                        {% if p.id == room.current_lady_holder.id and room.use_lady_of_the_lake%}
+                            <span class="position-absolute bottom-0 end-0 fs-5" 
+                                style="transform: translate(25%, 25%); z-index: 10;" 
+                                title="Holds the Lady of the Lake">
+                                🧜‍♀️
+                            </span>                   
+                        {% endif %}                        
 
                         {% if player.role == 'Lover' and p.id in known_player_ids %}
                             <span class="heart-icon">💖</span>
@@ -615,6 +622,12 @@
                                 <input class="form-check-input" type="checkbox" name="special_roles" value="Oberon" id="roleOberon">
                                 <label class="form-check-label fw-bold text-danger" for="roleOberon">Oberon</label>
                             </div>
+                            <div class="form-check mb-3 text-start">
+                                    <input class="form-check-input" type="checkbox" id="useLady" name="use_lady">
+                                    <label class="form-check-label" for="useLady">
+                                        🧜‍♀️ Include Lady of the Lake
+                                    </label>
+                            </div>                            
                         </div>
 
                         {% if all_players.count >= 5 and all_players.count <= 10 %}
@@ -634,23 +647,57 @@
             <div class="status-strip" id="main-action-strip">
                 
                 {% if room.current_phase == 'TEAM_BUILDING' or room.current_phase == 'TEAM_PROPOSAL' %}
-                    {% if player == room.current_leader %}
-                        <p class="status-text">Choose 
-                            {% if room.current_round == 1 %}{% if all_players.count < 8 %}2{% else %}3{% endif %}
-                            {% elif room.current_round == 2 %}{% if all_players.count < 8 %}3{% else %}4{% endif %}
-                            {% elif room.current_round == 3 %}{% if all_players.count == 5 %}2{% elif all_players.count == 7 %}3{% else %}4{% endif %}
-                            {% elif room.current_round == 4 %}{% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
-                            {% elif room.current_round == 5 %}{% if all_players.count == 5 %}3{% elif all_players.count < 8 %}4{% else %}5{% endif %}
-                            {% endif %} 
-                        players for your mission team</p>
-                        
-                        <form action="{% url 'propose_team' room.room_code %}" method="POST" class="m-0">
-                            {% csrf_token %}
-                            <button type="submit" id="propose-team-btn" class="btn btn-primary fw-bold px-4" disabled>OK</button>
-                        </form>
+                    {% if is_lady_turn %}
+                        {% if player.id != room.current_lady_holder.id %}
+                            <div class="alert alert-info text-center shadow-sm">
+                                <strong>🧜‍♀️ Waiting on the Lady of the Lake...</strong><br>
+                                {% if player == room.current_leader %}
+                                    <span class="small">You cannot propose a team until {{ room.current_lady_holder.user.username }} has used the Lady.</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     {% else %}
-                        <p class="status-text">{{ room.current_leader.user.username }} is choosing the mission team ...</p>
+                        {% if player == room.current_leader %}
+                            <p class="status-text">Choose 
+                                {% if room.current_round == 1 %}{% if all_players.count < 8 %}2{% else %}3{% endif %}
+                                {% elif room.current_round == 2 %}{% if all_players.count < 8 %}3{% else %}4{% endif %}
+                                {% elif room.current_round == 3 %}{% if all_players.count == 5 %}2{% elif all_players.count == 7 %}3{% else %}4{% endif %}
+                                {% elif room.current_round == 4 %}{% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
+                                {% elif room.current_round == 5 %}{% if all_players.count == 5 %}3{% elif all_players.count < 8 %}4{% else %}5{% endif %}
+                                {% endif %} 
+                            players for your mission team</p>
+                            
+                            <form action="{% url 'propose_team' room.room_code %}" method="POST" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" id="propose-team-btn" class="btn btn-primary fw-bold px-4" disabled>OK</button>
+                            </form>
+                        {% else %}
+                            <p class="status-text">{{ room.current_leader.user.username }} is choosing the mission team ...</p>
+                        {% endif %}
                     {% endif %}
+
+                    {% if player.id == room.current_lady_holder.id and is_lady_turn %}
+                            <div class="card mb-3 border-info shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title text-info">🧜‍♀️ Lady of the Lake Phase</h5>
+                                    <p class="small">The game is paused. You must check a player's loyalty before the next team can be proposed.</p>
+                                    <form action="{% url 'use_lady' room.room_code %}" method="POST">
+                                        {% csrf_token %}
+                                        <select name="lady_target" class="form-select mb-2" required>
+                                            <option value="">Select a player...</option>
+                                            {% for p in all_players %}
+                                                {% if p.id not in past_lady_ids %}
+                                                    <option value="{{ p.id }}">{{ p.user.username }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-info w-100 text-white fw-bold">Use Lady</button>
+                                    </form>
+                                </div>
+                            </div>
+                    {% endif %}
+                    
+
                 
                 {% elif room.current_phase == 'TEAM_VOTING' %}
                     {% if not player.has_voted %}
@@ -1269,10 +1316,13 @@
                 // --- OLD: Standard reload logic for phase changes, etc. ---
                 const isLeader = "{{ player.user.username }}" === "{{ room.current_leader.user.username }}";
                 const phase = "{{ room.current_phase }}";
+                const isWaitingOnLady = "{{ is_lady_turn|yesno:'true,false' }}" === "true";
                 
                 // Don't auto-reload the leader during team building
                 if (isLeader && (phase === 'TEAM_BUILDING' || phase === 'TEAM_PROPOSAL')) {
-                    return; 
+                    if (!isWaitingOnLady) {
+                        return; 
+                    }                    
                 }
 
                 console.log("Update received! Reloading...");

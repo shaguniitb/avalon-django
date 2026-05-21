@@ -252,6 +252,9 @@ def reset_room_for_rematch(room):
     room.missions.all().delete()
     room.history_proposals.all().delete()
 
+    room.use_lady_of_the_lake = False
+    room.current_lady_holder = None
+
     # Reset all players
     for player in room.players.all():
         player.role = None
@@ -264,6 +267,8 @@ def reset_room_for_rematch(room):
         player.quest_vote_success = None
 
         player.last_vote = None
+        player.pending_message = None
+        player.lady_target = None
 
         player.save()
 
