@@ -228,6 +228,52 @@
             letter-spacing: 0.5px;
         }        
 
+        /* Quest Card Flip Animation */
+        .quest-card {
+            width: 100px;
+            height: 150px;
+            perspective: 1000px;
+            margin: 0 10px;
+        }
+        .quest-card-inner {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .quest-card.flipped .quest-card-inner {
+            transform: rotateY(180deg);
+        }
+        .quest-card-front, .quest-card-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+        .quest-card-front {
+            background-color: #2b3035; /* Dark face-down color */
+            color: #ffffff;
+            border: 2px solid #495057;
+        }
+        .quest-card-back {
+            transform: rotateY(180deg);
+        }
+        .quest-card-back.success { background-color: #198754; color: white; border: 2px solid #146c43; }
+        .quest-card-back.fail { background-color: #dc3545; color: white; border: 2px solid #b02a37; }
+
+
+
+
         /* --- MOBILE OPTIMIZATIONS --- */
     @media (max-width: 576px) {
         /* If your avatar background/border has a fixed size, shrink it here */
@@ -459,6 +505,7 @@
                     {% elif room.current_phase == 'TEAM_PROPOSAL' %}Team Proposal
                     {% elif room.current_phase == 'TEAM_VOTING' %}Team Voting
                     {% elif room.current_phase == 'QUESTING' %}Questing
+                    {% elif room.current_phase == 'QUEST_REVEAL' %}Revealing Mission Results
                     {% elif room.current_phase == 'EVIL_WINS' %}Evil Wins
                     {% elif room.current_phase == 'GOOD_WINS' %}Good Wins
                     {% elif room.current_phase == 'ASSASSIN_PHASE' %}Assassin Phase
@@ -468,67 +515,99 @@
                 <div class="d-flex justify-content-center gap-3">
                     
                     <div class="d-flex flex-column align-items-center">
+
                         <div class="mission-square bg-white text-dark {% if room.current_round == 1 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                             {% for m in room.missions.all %}{% if m.round_number == 1 %}
-                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 1 %}
+                                    {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                    {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% endif %}
                             {% endif %}{% endfor %}">
                             {% if all_players.count < 8 %}2{% else %}3{% endif %}
                         </div>
+
                         <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
-                            {% for m in room.missions.all %}{% if m.round_number == 1 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
-                        </div>
+                            {% for m in room.missions.all %}{% if m.round_number == 1 and m.fails_count > 0 %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 1 %}
+                                    {{ m.fails_count }} Fail{{ m.fails_count|pluralize }}
+                                {% endif %}
+                            {% endif %}{% endfor %}
+                        </div>                        
                     </div>
                     
-                    <div class="d-flex flex-column align-items-center">
+<div class="d-flex flex-column align-items-center">
                         <div class="mission-square bg-white text-dark {% if room.current_round == 2 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                             {% for m in room.missions.all %}{% if m.round_number == 2 %}
-                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 2 %}
+                                    {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                    {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% endif %}
                             {% endif %}{% endfor %}">
                             {% if all_players.count < 8 %}3{% else %}4{% endif %}
                         </div>
                         <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
-                            {% for m in room.missions.all %}{% if m.round_number == 2 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                            {% for m in room.missions.all %}{% if m.round_number == 2 and m.fails_count > 0 %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 2 %}
+                                    {{ m.fails_count }} Fail{{ m.fails_count|pluralize }}
+                                {% endif %}
+                            {% endif %}{% endfor %}
                         </div>
                     </div>
 
                     <div class="d-flex flex-column align-items-center">
                         <div class="mission-square bg-white text-dark {% if room.current_round == 3 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                             {% for m in room.missions.all %}{% if m.round_number == 3 %}
-                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 3 %}
+                                    {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                    {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% endif %}
                             {% endif %}{% endfor %}">
                             {% if all_players.count == 5 %}2{% elif all_players.count == 7 %}3{% else %}4{% endif %}
                         </div>
                         <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
-                            {% for m in room.missions.all %}{% if m.round_number == 3 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                            {% for m in room.missions.all %}{% if m.round_number == 3 and m.fails_count > 0 %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 3 %}
+                                    {{ m.fails_count }} Fail{{ m.fails_count|pluralize }}
+                                {% endif %}
+                            {% endif %}{% endfor %}
                         </div>
                     </div>
 
                     <div class="d-flex flex-column align-items-center">
                         <div class="mission-square bg-white text-dark {% if room.current_round == 4 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                             {% for m in room.missions.all %}{% if m.round_number == 4 %}
-                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 4 %}
+                                    {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                    {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% endif %}
                             {% endif %}{% endfor %}">
                             {% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
                         </div>
                         <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
-                            {% for m in room.missions.all %}{% if m.round_number == 4 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                            {% for m in room.missions.all %}{% if m.round_number == 4 and m.fails_count > 0 %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 4 %}
+                                    {{ m.fails_count }} Fail{{ m.fails_count|pluralize }}
+                                {% endif %}
+                            {% endif %}{% endfor %}
                         </div>
                     </div>
 
                     <div class="d-flex flex-column align-items-center">
                         <div class="mission-square bg-white text-dark {% if room.current_round == 5 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                             {% for m in room.missions.all %}{% if m.round_number == 5 %}
-                                {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
-                                {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 5 %}
+                                    {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
+                                    {% else %}background-color: #dc3545 !important; color: white !important; border-color: #dc3545 !important;{% endif %}
+                                {% endif %}
                             {% endif %}{% endfor %}">
                             {% if all_players.count == 5 %}3{% elif all_players.count < 8 %}4{% else %}5{% endif %}
                         </div>
                         <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
-                            {% for m in room.missions.all %}{% if m.round_number == 5 and m.fails_count > 0 %}{{ m.fails_count }} Fail{{ m.fails_count|pluralize }}{% endif %}{% endfor %}
+                            {% for m in room.missions.all %}{% if m.round_number == 5 and m.fails_count > 0 %}
+                                {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 5 %}
+                                    {{ m.fails_count }} Fail{{ m.fails_count|pluralize }}
+                                {% endif %}
+                            {% endif %}{% endfor %}
                         </div>
                     </div>
 
@@ -774,6 +853,82 @@
                             </script>
                         {% endif %}
                     </div>
+
+
+
+
+                {% elif room.current_phase == 'QUEST_REVEAL' %}
+                    <div class="card mb-3 border-secondary shadow-sm text-center">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">🔮 Revealing Mission Results...</h5>
+                            
+                            <div id="quest-reveal-container" class="d-flex justify-content-center flex-wrap mt-4 mb-4">
+                                </div>
+
+                            <form method="POST" action="{% url 'advance_reveal' room.room_code %}" id="continue-reveal-form" style="display: none; opacity: 0; transition: opacity 1s;">
+                                {% csrf_token %}
+                                {% if request.user == room.current_leader.user %}
+                                    <button type="submit" class="btn btn-primary px-5 fw-bold">Continue Game</button>
+                                {% else %}
+                                    <p class="text-muted mb-0"><i class="bi bi-hourglass-split"></i> Waiting for leader to continue...</p>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const failsCount = {{ room.missions.last.fails_count|default:0 }};
+                            const teamSize = {{ room.missions.last.team_size|default:0 }};
+                            const successCount = teamSize - failsCount;
+
+                            // 1. Build tension array: Successes ALWAYS first, Fails ALWAYS last
+                            const results = [];
+                            for(let i=0; i<successCount; i++) results.push('SUCCESS');
+                            for(let i=0; i<failsCount; i++) results.push('FAIL');
+
+                            const container = document.getElementById("quest-reveal-container");
+
+                            // 2. Render all cards face-down
+                            results.forEach(vote => {
+                                const isSuccess = (vote === 'SUCCESS');
+                                const backClass = isSuccess ? 'success' : 'fail';
+                                const text = isSuccess ? 'PASS' : 'FAIL';
+
+                                container.innerHTML += `
+                                    <div class="quest-card">
+                                        <div class="quest-card-inner">
+                                            <div class="quest-card-front">Avalon</div>
+                                            <div class="quest-card-back ${backClass}">${text}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+
+                            // 3. Stagger the flips (1.5 seconds apart)
+                            const cards = document.querySelectorAll('.quest-card');
+                            let initialDelay = 1000; // Wait 1s before the first card flips
+                            let delayBetweenFlips = 1500;
+
+                            cards.forEach((card, index) => {
+                                setTimeout(() => {
+                                    card.classList.add('flipped');
+                                }, initialDelay + (index * delayBetweenFlips));
+                            });
+
+                            // 4. Reveal the Continue button gracefully at the very end
+                            setTimeout(() => {
+                                const form = document.getElementById('continue-reveal-form');
+                                form.style.display = 'block';
+                                // tiny timeout to allow display block to register before opacity fades in
+                                setTimeout(() => form.style.opacity = '1', 50); 
+                            }, initialDelay + (cards.length * delayBetweenFlips) + 800);
+                        });
+                    </script>
+
+
+
+                    
                 
                 {% elif room.current_phase == 'ASSASSIN_PHASE' %}
 

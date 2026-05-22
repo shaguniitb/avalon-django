@@ -748,3 +748,37 @@ def use_lady(request, room_code):
     broadcast_game_update(room_code)
     return redirect('game_room', room_code=room_code)
     
+@require_POST
+@login_required
+def advance_reveal(request, room_code):
+    game_room = get_object_or_404(GameRoom, room_code=room_code)
+    
+    # Security: Ensure only the leader can click continue
+    if request.user != game_room.current_leader.user:
+        return redirect('game_room', room_code=room_code)
+
+    # --- THIS IS YOUR EXACT LOGIC MOVED FROM TALLY_QUEST_VOTES ---
+    if game_room.score_good >= 3:
+        has_assassin = game_room.players.filter(role='Assassin').exists()
+        if has_assassin:
+            game_room.current_phase = 'ASSASSIN_PHASE'
+            game_room.assassination_start_time = timezone.now()
+        else:
+            game_room.current_phase = 'GOOD_WINS'
+    elif game_room.score_evil >= 3:
+        game_room.current_phase = 'EVIL_WINS'
+    else:
+        game_room.current_round += 1
+        game_room.current_phase = 'TEAM_BUILDING'
+        
+        # CLEAR THE PROPOSED TEAM SO YELLOW BACKGROUNDS DISAPPEAR
+        game_room.proposed_team.clear()
+        
+        current_seat = game_room.current_leader.seat_order
+        total_players = game_room.players.count()
+        next_seat = (current_seat % total_players) + 1 
+        game_room.current_leader = game_room.players.get(seat_order=next_seat)
+
+    game_room.save()
+    broadcast_game_update(room_code)
+    return redirect('game_room', room_code=room_code)

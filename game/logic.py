@@ -177,27 +177,8 @@ def tally_quest_votes(game_room, votes):
     else:
         game_room.score_evil += 1
         
-    if game_room.score_good >= 3:
-        has_assassin = game_room.players.filter(role='Assassin').exists()
-        if has_assassin:
-            game_room.current_phase = 'ASSASSIN_PHASE'
-            game_room.assassination_start_time = timezone.now()
-        else:
-            game_room.current_phase = 'GOOD_WINS'
-    elif game_room.score_evil >= 3:
-        game_room.current_phase = 'EVIL_WINS'
-    else:
-        game_room.current_round += 1
-        game_room.current_phase = 'TEAM_BUILDING'
-        
-        # CLEAR THE PROPOSED TEAM SO YELLOW BACKGROUNDS DISAPPEAR
-        game_room.proposed_team.clear()
-        
-        current_seat = game_room.current_leader.seat_order
-        total_players = game_room.players.count()
-        next_seat = (current_seat % total_players) + 1 
-        game_room.current_leader = game_room.players.get(seat_order=next_seat)
-        
+    # --- NEW: Pause the game right here for the animation! ---
+    game_room.current_phase = 'QUEST_REVEAL'
     game_room.save()
 
 def attempt_assassination(game_room, target_player_ids):
