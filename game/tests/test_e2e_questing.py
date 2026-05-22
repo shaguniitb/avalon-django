@@ -107,6 +107,12 @@ class QuestingE2ETests(ChannelsLiveServerTestCase):
                 success_btn = page.get_by_role("button", name="Success")
                 success_btn.wait_for(state="visible", timeout=5000)
                 success_btn.click()
+
+            print("[TEST INFO] Waiting for mission reveal animation...")  
+
+            continue_btn = leader_page.get_by_role("button", name="Continue Game")
+            continue_btn.wait_for(state="visible", timeout=10000)
+            continue_btn.click()                          
                 
             # 6. Verify Round Advancement
             pages[0].wait_for_timeout(1000)
