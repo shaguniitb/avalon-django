@@ -30,6 +30,50 @@
         </div>
     {% endif %}    
 
+<div class="row justify-content-center mb-4">
+    <div class="col-12 col-md-8 col-lg-6">
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white text-center py-2">
+                <h5 class="mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top Players</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-striped table-hover mb-0 text-center align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Player</th>
+                            <th>Games</th>
+                            <th>Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for player in top_5_players %}
+                        <tr>
+                            <td class="fw-bold">
+                                <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                    {{ player.username }}
+                                </a>
+                            </td>
+                            <td>{{ player.games }}</td>
+                            <td class="text-success fw-bold">{{ player.win_rate_str }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-muted py-4">No completed games yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
 <div class="row">
 
     <div class="col-md-8 mb-4">

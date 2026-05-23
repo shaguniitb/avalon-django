@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.db import models
 from .models import GameRoom, Player, Spectator
-from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room
+from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room, get_top_players
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -105,27 +105,39 @@ def home(request):
 
             return redirect('game_room', room_code=room_code)        
         
+    top_5_players = get_top_players(limit=3)
+    
     # Fetch all rooms that are currently waiting for players (LOBBY phase)
     available_lobbies = GameRoom.objects.filter(
-        current_phase='LOBBY'
+        current_phase='LOBBY',
+        is_active = True,
         ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
 
-    active_games = GameRoom.objects.exclude(
-        current_phase='LOBBY'
-        ).exclude(
-            players__user =request.user
-        ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
-    
-    # Check if the current user is already in a game so we can show a "Rejoin" button
-    active_game = None
-    active_player = Player.objects.filter(user=request.user, game__is_active=True).first()
-    if active_player:
-        active_game = active_player.game
+    # Fetch ongoing games that the user IS NOT in
+    # (Exclude LOBBY, finished phases, and aborted games)
+    active_games = GameRoom.objects.filter(
+        is_active=True
+    ).exclude(
+        current_phase__in=['LOBBY', 'GOOD_WINS', 'EVIL_WINS', 'ABORTED']
+    ).exclude(
+        players__user=request.user
+    ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
+
+
+    # Fetch the ongoing game that the user IS in (for the Rejoin button)
+    # Order by -created_at to ensure we get their most recent active game
+    active_game = GameRoom.objects.filter(
+        players__user=request.user,
+        is_active=True
+    ).exclude(
+        current_phase__in=['GOOD_WINS', 'EVIL_WINS', 'ABORTED']
+    ).order_by('-created_at').first()
     
     return render(request, 'game/home.html', {
         'available_lobbies': available_lobbies,
         'active_games': active_games,
         'active_game': active_game, # Pass the active game to the template
+        'top_5_players': top_5_players,
     })
 
 

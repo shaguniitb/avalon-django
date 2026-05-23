@@ -2,6 +2,7 @@
 import random
 import string
 from django.utils import timezone
+from django.contrib.auth.models import User
 from .models import GameRoom, Player, Mission, TeamProposal
 
 # Dictionary defining (Good, Evil) counts based on total players
@@ -236,3 +237,47 @@ def transition_to_new_room(old_room):
     old_room.save()
     
     return new_code
+
+def get_top_players(limit=5):
+    """
+    Calculates the win rates for all players across completed games
+    and returns a sorted list of the top players.
+    """
+    top_players = []
+    
+    # Grab all users who have participated in a completed game
+    users_with_games = User.objects.filter(
+        player__game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+    ).distinct()
+    
+    for u in users_with_games:
+        # Fetch all completed game records for this specific user
+        completed_players = Player.objects.filter(
+            user=u, 
+            game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+        ).select_related('game')
+        
+        games_played = len(completed_players)
+        
+        if games_played > 0:
+            # Tally the wins
+            wins = sum(
+                1 for p in completed_players 
+                if (p.is_good and p.game.current_phase == 'GOOD_WINS') or 
+                   (not p.is_good and p.game.current_phase == 'EVIL_WINS')
+            )
+            
+            win_rate = wins / games_played
+            
+            top_players.append({
+                'username': u.username,
+                'games': games_played,
+                'win_rate_val': win_rate,
+                'win_rate_str': f"{int(win_rate * 100)}%"
+            })
+            
+    # Sort by win rate (descending), then by games played (descending) as a tie-breaker
+    top_players.sort(key=lambda x: (x['win_rate_val'], x['games']), reverse=True)
+    
+    # Return only the requested number of top players
+    return top_players[:limit]
