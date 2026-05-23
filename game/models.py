@@ -28,6 +28,9 @@ class GameRoom(models.Model):
     # Tracks the person currently holding the token
     current_lady_holder = models.ForeignKey('Player', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_lady_room')
 
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    rematch_code = models.CharField(max_length=6, null=True, blank=True)
+
     @property
     def hammer_player(self):
         """Calculates and returns the player who holds the hammer for the 5th vote."""

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ target_user.username }}'s Stats - Avalon</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5 mb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="display-6">Statistics for <strong>{{ target_user.username }}</strong></h2>
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+            Back to Lobby
+        </a>
+    </div>
+    <hr class="mb-4">
+    
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center py-4">
+                    <h5 class="text-muted text-uppercase mb-2">Total Games Played</h5>
+                    <h1 class="display-4 fw-bold text-dark">{{ total_games }}</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center py-4">
+                    <h5 class="text-muted text-uppercase mb-2">Overall Win Rate</h5>
+                    <h1 class="display-4 fw-bold text-primary">{{ overall_win_rate }}</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4 mb-md-0">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h4 class="card-title border-bottom pb-2 mb-3">General Statistics</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Side</th>
+                                    <th class="text-center">Games Count</th>
+                                    <th class="text-end">Win Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-primary">Good Team</span></td>
+                                    <td class="text-center">{{ side_stats.Good.games }}</td>
+                                    <td class="text-end fw-bold">{{ side_stats.Good.rate }}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">Evil Team</span></td>
+                                    <td class="text-center">{{ side_stats.Evil.games }}</td>
+                                    <td class="text-end fw-bold">{{ side_stats.Evil.rate }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h4 class="card-title border-bottom pb-2 mb-3">Last 5 Games</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Play Date</th>
+                                    <th>Role</th>
+                                    <th class="text-end">Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in last_games %}
+                                <tr>
+                                    <td class="text-muted small">{{ game.date }}</td>
+                                    <td>{{ game.role }}</td>
+                                    <td class="text-end {% if game.result == 'Win' %}text-success{% else %}text-danger{% endif %}">
+                                        <strong>{{ game.result }}</strong>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center py-3 text-muted">No completed games found.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h4 class="card-title border-bottom pb-2 mb-3">Player Ratings by Role</h4>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Role</th>
+                            <th class="text-center">Games Count</th>
+                            <th class="text-end">Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for role, stats in role_stats.items %}
+                        <tr>
+                            <td class="fw-medium">{{ role }}</td>
+                            <td class="text-center">{{ stats.games }}</td>
+                            <td class="text-end fw-bold">{{ stats.rate }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center py-3 text-muted">No role data available yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4 mb-md-0">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h4 class="card-title border-bottom pb-2 mb-2">Teammates</h4>
+                    <p class="text-muted small mb-3">Your win rate when playing on the <strong>SAME</strong> team as this player.</p>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Player</th>
+                                    <th class="text-center">Games</th>
+                                    <th class="text-end">Win Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for username, stats in teammates.items %}
+                                <tr>
+                                    <td><a href="{% url 'player_statistics' username %}" class="text-decoration-none">{{ username }}</a></td>
+                                    <td class="text-center">{{ stats.games }}</td>
+                                    <td class="text-end fw-bold">{{ stats.rate }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center py-3 text-muted">No teammate data.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h4 class="card-title border-bottom pb-2 mb-2">Enemies</h4>
+                    <p class="text-muted small mb-3">Your win rate when playing on the <strong>OPPOSITE</strong> team as this player.</p>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Player</th>
+                                    <th class="text-center">Games</th>
+                                    <th class="text-end">Win Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for username, stats in enemies.items %}
+                                <tr>
+                                    <td><a href="{% url 'player_statistics' username %}" class="text-decoration-none">{{ username }}</a></td>
+                                    <td class="text-center">{{ stats.games }}</td>
+                                    <td class="text-end fw-bold">{{ stats.rate }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center py-3 text-muted">No enemy data.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

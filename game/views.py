@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.db import models
 from .models import GameRoom, Player, Spectator
-from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, reset_room_for_rematch
+from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -132,12 +132,22 @@ def home(request):
 @login_required
 def game_room(request, room_code):
     # Safely try to find the room
-    room = GameRoom.objects.filter(room_code=room_code).first()
+    try:
+        room = GameRoom.objects.get(room_code=room_code)
+    except GameRoom.DoesNotExist:
+        # --- NEW: Only show this message if the user IS NOT the one who deleted it ---
+        # We can't check room.host because the room is gone, so we just assume 
+        # that if they just created a new game, we shouldn't spam them with this error.
+        messages.info(request, "That game no longer exists.")
+        return redirect('home')
     
-    # If the room doesn't exist, send them to the lobby with a message
-    if not room:
-        messages.warning(request, "That game no longer exists.")
-        return redirect('home')    
+    if room.rematch_code:
+        return redirect('game_room', room_code=room.rematch_code)    
+    
+    if not room.is_active:
+        if request.user != room.host:
+            messages.info(request, "The host has disbanded this room.")
+        return redirect('home')
 
     player = Player.objects.filter(user=request.user, game=room).first()
 
@@ -607,25 +617,27 @@ def toggle_player_selection(request, room_code, player_id):
         
     return JsonResponse({'status': 'success', 'action': action})
 
+
 @require_POST
 @login_required
 def play_again(request, room_code):
-    room = get_object_or_404(GameRoom, room_code=room_code)
-
-    # Only host can reset the room
-    if request.user != room.host:
+    old_room = get_object_or_404(GameRoom, room_code=room_code)
+    
+    # Security check: Only the host can start a rematch
+    if request.user != old_room.host:
         return redirect('game_room', room_code=room_code)
-
-    # Only after game end
-    if room.current_phase not in ['GOOD_WINS', 'EVIL_WINS']:
-        return redirect('game_room', room_code=room_code)
-
-    reset_room_for_rematch(room)
-
-    # Refresh everyone instantly
+        
+    # If the rematch hasn't been generated yet, do it now using our helper
+    if not old_room.rematch_code:
+        transition_to_new_room(old_room)
+        
+    # Broadcast to the old room. This forces everyone's browser to reload via JS
+    # and hit the room.rematch_code interceptor we added earlier.
     broadcast_game_update(room_code)
+    
+    # Redirect the host to the new room
+    return redirect('game_room', room_code=old_room.rematch_code)
 
-    return redirect('game_room', room_code=room_code)
 
 @require_POST
 @login_required
@@ -639,11 +651,17 @@ def end_game(request, room_code):
 
     # 2. Only run this if the game is actually in progress
     if room.current_phase not in ['LOBBY', 'GOOD_WINS', 'EVIL_WINS']:
-        # We reuse your existing logic that resets the board for a rematch!
-        reset_room_for_rematch(room)
+        # Mark the current game as aborted so it never gets counted in statistics
+        room.current_phase = 'ABORTED'
         
-        # Broadcast the update so all players' screens instantly refresh to the lobby
+        # Use our helper to create the new room and link them up
+        # Note: transition_to_new_room calls room.save(), which saves our ABORTED status too
+        new_code = transition_to_new_room(room)
+        
+        # Broadcast the update so everyone's screen instantly redirects
         broadcast_game_update(room_code)
+        
+        return redirect('game_room', room_code=new_code)
 
     return redirect('game_room', room_code=room_code)
 
@@ -686,13 +704,20 @@ def delete_game(request, room_code):
         messages.error(request, "Only the host can delete the game.")
         return redirect('game_room', room_code=room_code)
 
-    # 1. Delete the room from the database
-    room.delete()
+    if room.current_phase in ['GOOD_WINS', 'EVIL_WINS']:
+        # Mark as inactive to archive it instead of deleting it
+        room.is_active = False
+        room.save()
+        broadcast_game_update(room_code)
+    else:
+        # If it never finished (Lobby or aborted), it's safe to fully delete
+        room.delete()
+
 
     # 2. Broadcast the update. 
     # Because the room no longer exists, when the clients reload, your game_room 
     # view will automatically redirect them all to the lobby browser!
-    broadcast_game_update(room_code)
+    
 
     return redirect('home')
 
@@ -782,3 +807,105 @@ def advance_reveal(request, room_code):
     game_room.save()
     broadcast_game_update(room_code)
     return redirect('game_room', room_code=room_code)
+
+
+def player_statistics(request, username):
+    target_user = get_object_or_404(User, username=username)
+
+    # Fetch only completed games. We use select_related and prefetch_related 
+    # to grab all co-players in exactly 2 queries instead of hundreds.
+    completed_games = Player.objects.filter(
+        user=target_user,
+        game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+    ).select_related('game').prefetch_related('game__players__user').order_by('-game__created_at')
+
+    total_games = 0
+    total_wins = 0
+
+    side_stats = {'Good': {'games': 0, 'wins': 0}, 'Evil': {'games': 0, 'wins': 0}}
+    role_stats = {}
+    teammates = {}
+    enemies = {}
+    last_games = []
+
+    for player in completed_games:
+        game = player.game
+        total_games += 1
+        
+        # Determine if this specific player won the game
+        won = (player.is_good and game.current_phase == 'GOOD_WINS') or \
+              (not player.is_good and game.current_phase == 'EVIL_WINS')
+              
+        if won:
+            total_wins += 1
+
+        # --- Side Stats ---
+        side = 'Good' if player.is_good else 'Evil'
+        side_stats[side]['games'] += 1
+        if won: side_stats[side]['wins'] += 1
+
+        # --- Role Stats ---
+        role = player.role or "Unknown"
+        if role not in role_stats:
+            role_stats[role] = {'games': 0, 'wins': 0}
+        role_stats[role]['games'] += 1
+        if won: role_stats[role]['wins'] += 1
+
+        # --- Last 5 Games ---
+        if len(last_games) < 5:
+            last_games.append({
+                'date': game.created_at.strftime('%Y-%m-%d %H:%M') if game.created_at else 'Unknown',
+                'role': role,
+                'result': 'Win' if won else 'Loss'
+            })
+
+        # --- Teammates and Enemies ---
+        for co_player in game.players.all():
+            if co_player.user == target_user:
+                continue # Skip themselves
+                
+            cp_username = co_player.user.username
+            
+            if co_player.is_good == player.is_good:
+                # They were on the same team
+                if cp_username not in teammates:
+                    teammates[cp_username] = {'games': 0, 'wins': 0}
+                teammates[cp_username]['games'] += 1
+                if won: teammates[cp_username]['wins'] += 1
+            else:
+                # They were on opposite teams
+                if cp_username not in enemies:
+                    enemies[cp_username] = {'games': 0, 'wins': 0}
+                enemies[cp_username]['games'] += 1
+                if won: enemies[cp_username]['wins'] += 1
+
+    # Calculate percentages for the templates
+    def calc_rate(wins, games):
+        return f"{int((wins / games) * 100)}%" if games > 0 else "0%"
+
+    overall_win_rate = calc_rate(total_wins, total_games)
+    
+    for side in side_stats.values():
+        side['rate'] = calc_rate(side['wins'], side['games'])
+        
+    for role in role_stats.values():
+        role['rate'] = calc_rate(role['wins'], role['games'])
+        
+    for tm in teammates.values():
+        tm['rate'] = calc_rate(tm['wins'], tm['games'])
+        
+    for en in enemies.values():
+        en['rate'] = calc_rate(en['wins'], en['games'])
+
+    context = {
+        'target_user': target_user,
+        'total_games': total_games,
+        'overall_win_rate': overall_win_rate,
+        'side_stats': side_stats,
+        'role_stats': role_stats,
+        'last_games': last_games,
+        'teammates': teammates,
+        'enemies': enemies,
+    }
+    return render(request, 'game/stats.html', context)
+

@@ -1,5 +1,6 @@
 # game/logic.py
 import random
+import string
 from django.utils import timezone
 from .models import GameRoom, Player, Mission, TeamProposal
 
@@ -207,50 +208,31 @@ def attempt_assassination(game_room, target_player_ids):
         
     game_room.save()
 
-def reset_room_for_rematch(room):
+def transition_to_new_room(old_room):
     """
-    Resets the game room back to a clean lobby state
-    while keeping the same players in the room.
+    Creates a fresh lobby, moves all players to it, and sets the 
+    rematch_code on the old room to redirect everyone.
+    Returns the new room code.
     """
-
-    # Reset core room state
-    room.current_phase = 'LOBBY'
-    room.current_round = 1
-    room.failed_votes = 0
-
-    room.score_good = 0
-    room.score_evil = 0
-
-    room.victory_reason = None
-    room.assassination_start_time = None
-
-    room.current_leader = None
-
-    # Clear proposed team
-    room.proposed_team.clear()
-
-    # Delete historical game data
-    room.missions.all().delete()
-    room.history_proposals.all().delete()
-
-    room.use_lady_of_the_lake = False
-    room.current_lady_holder = None
-
-    # Reset all players
-    for player in room.players.all():
-        player.role = None
-        player.is_good = True
-
-        player.has_voted = False
-        player.vote_approve = None
-
-        player.has_quest_voted = False
-        player.quest_vote_success = None
-
-        player.last_vote = None
-        player.pending_message = None
-        player.lady_target = None
-
-        player.save()
-
-    room.save()    
+    # Generate a new unique room code
+    while True:
+        new_code = ''.join(random.choices(string.ascii_uppercase, k=5))
+        if not GameRoom.objects.filter(room_code=new_code).exists():
+            break
+            
+    # Create a completely fresh game room
+    new_room = GameRoom.objects.create(
+        room_code=new_code,
+        host=old_room.host,
+        allow_spectator_spoilers=old_room.allow_spectator_spoilers
+    )
+    
+    # Clone all players from the old room as brand new instances in the new room
+    for p in old_room.players.all():
+        Player.objects.create(user=p.user, game=new_room)
+        
+    # Set the forwarding address on the old room
+    old_room.rematch_code = new_code
+    old_room.save()
+    
+    return new_code
