@@ -1,3 +1,4 @@
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -87,7 +88,13 @@
                             <tbody>
                                 {% for game in last_games %}
                                 <tr>
-                                    <td class="text-muted small">{{ game.date }}</td>
+                                    <td class="text-muted small">
+                                        {% if game.date %}
+                                            {{ game.date|timezone:"America/New_York"|date:"M d, Y g:i A" }}
+                                        {% else %}
+                                            Unknown
+                                        {% endif %}                                    
+                                    </td>
                                     <td>{{ game.role }}</td>
                                     <td class="text-end {% if game.result == 'Win' %}text-success{% else %}text-danger{% endif %}">
                                         <strong>{{ game.result }}</strong>

@@ -9,6 +9,7 @@ from django.http import JsonResponse, request
 from django.db import transaction
 from django.db.models import Count
 from django.db import models
+from django.utils import timezone
 from .models import GameRoom, Player, Spectator
 from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room, get_top_players
 
@@ -866,7 +867,7 @@ def player_statistics(request, username):
         # --- Last 5 Games ---
         if len(last_games) < 5:
             last_games.append({
-                'date': game.created_at.strftime('%Y-%m-%d %H:%M') if game.created_at else 'Unknown',
+                'date': game.created_at,
                 'role': role,
                 'result': 'Win' if won else 'Loss'
             })
