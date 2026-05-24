@@ -1,0 +1,326 @@
+            <div class="status-strip" id="main-action-strip">
+                
+                {% if room.current_phase == 'TEAM_BUILDING' or room.current_phase == 'TEAM_PROPOSAL' %}
+                    {% if is_lady_turn %}
+                        {% if player.id != room.current_lady_holder.id %}
+                            <div class="alert alert-info text-center shadow-sm">
+                                <strong>🧜‍♀️ Waiting on the Lady of the Lake...</strong><br>
+                                {% if player == room.current_leader %}
+                                    <span class="small">You cannot propose a team until {{ room.current_lady_holder.user.username }} has used the Lady.</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        {% if player == room.current_leader %}
+                            <p class="status-text">Choose 
+                                {% if room.current_round == 1 %}{% if all_players.count < 8 %}2{% else %}3{% endif %}
+                                {% elif room.current_round == 2 %}{% if all_players.count < 8 %}3{% else %}4{% endif %}
+                                {% elif room.current_round == 3 %}{% if all_players.count == 5 %}2{% elif all_players.count == 7 %}3{% else %}4{% endif %}
+                                {% elif room.current_round == 4 %}{% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
+                                {% elif room.current_round == 5 %}{% if all_players.count == 5 %}3{% elif all_players.count < 8 %}4{% else %}5{% endif %}
+                                {% endif %} 
+                            players for your mission team</p>
+                            
+                            <form action="{% url 'propose_team' room.room_code %}" method="POST" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" id="propose-team-btn" class="btn btn-primary fw-bold px-4" disabled>OK</button>
+                            </form>
+                        {% else %}
+                            <p class="status-text">{{ room.current_leader.user.username }} is choosing the mission team ...</p>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if player.id == room.current_lady_holder.id and is_lady_turn %}
+                            <div class="card mb-3 border-info shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title text-info">🧜‍♀️ Lady of the Lake Phase</h5>
+                                    <p class="small">The game is paused. You must check a player's loyalty before the next team can be proposed.</p>
+                                    <form action="{% url 'use_lady' room.room_code %}" method="POST">
+                                        {% csrf_token %}
+                                        <select name="lady_target" class="form-select mb-2" required>
+                                            <option value="">Select a player...</option>
+                                            {% for p in all_players %}
+                                                {% if p.id not in past_lady_ids %}
+                                                    <option value="{{ p.id }}">{{ p.user.username }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-info w-100 text-white fw-bold">Use Lady</button>
+                                    </form>
+                                </div>
+                            </div>
+                    {% endif %}
+                    
+
+                
+                {% elif room.current_phase == 'TEAM_VOTING' %}
+                    {% if not player.has_voted %}
+                        <p class="status-text" id="proposed-players-text"></p>
+                        <script>
+                            const proposed = [{% for tm in room.proposed_team.all %}"{{ tm.user.username }}",{% endfor %}];
+                            let pText = proposed.join(" and ");
+                            if(proposed.length > 2) pText = proposed.slice(0, -1).join(", ") + " and " + proposed[proposed.length - 1];
+                            document.getElementById('proposed-players-text').innerText = "{{ room.current_leader.user.username }} chose mission team: " + pText;
+                        </script>
+
+                        <form action="{% url 'cast_vote' room.room_code %}" method="POST" class="d-flex gap-2 m-0" onsubmit="handleVoteSubmit(event)">
+                            {% csrf_token %}
+                            <button type="submit" name="vote_choice" value="approve" class="btn btn-success fw-bold px-4">Approve</button>
+                            <button type="submit" name="vote_choice" value="reject" class="btn btn-danger fw-bold px-4">Reject</button>
+                        </form>
+                    {% else %}
+                        <p class="status-text" id="unvoted-players-text"></p>
+                        <script>
+                            const unvoted = [{% for p in all_players %}{% if not p.has_voted %}"{{ p.user.username }}",{% endif %}{% endfor %}];
+                            let uText = unvoted.join(" and ");
+                            if(unvoted.length > 2) uText = unvoted.slice(0, -1).join(", ") + " and " + unvoted[unvoted.length - 1];
+                            let verb = (unvoted.length === 1) ? "is" : "are";
+                            document.getElementById('unvoted-players-text').innerText = uText + " " + verb + " voting on the mission team";
+                        </script>
+                    {% endif %}
+                
+                {% elif room.current_phase == 'QUESTING' %}
+                    
+                    <div id="quest-approval-step" class="d-flex align-items-center gap-3">
+                        <p class="status-text text-success m-0">The mission team is approved</p>
+                        <button type="button" class="btn btn-outline-secondary fw-bold px-4" onclick="showQuestAction()">OK</button>
+                    </div>
+
+                    <div id="quest-action-step" class="d-none align-items-center justify-content-center w-100">
+                        {% if player in room.proposed_team.all %}
+                            {% if not player.has_quest_voted %}
+                                <form action="{% url 'cast_quest_vote' room.room_code %}" method="POST" class="d-flex gap-3 m-0 align-items-center" onsubmit="handleVoteSubmit(event)">
+                                    {% csrf_token %}
+                                    <button type="submit" name="quest_vote" value="success" class="btn btn-primary fw-bold px-4">Success</button>
+                                    {% if not player.is_good %}
+                                        <button type="submit" name="quest_vote" value="fail" class="btn btn-danger fw-bold px-4">Fail</button>
+                                    {% endif %}
+                                </form>
+                            {% else %}
+                                <p class="status-text text-muted m-0">Waiting for the rest of the team to finish the quest...</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="status-text text-muted m-0" id="questing-players-text"></p>
+                            <script>
+                                const questers = [{% for tm in room.proposed_team.all %}"{{ tm.user.username }}",{% endfor %}];
+                                let qText = questers.join(" and ");
+                                if(questers.length > 2) qText = questers.slice(0, -1).join(", ") + " and " + questers[questers.length - 1];
+                                document.getElementById('questing-players-text').innerText = qText + " are on the mission";
+                            </script>
+                        {% endif %}
+                    </div>
+
+
+
+
+                {% elif room.current_phase == 'QUEST_REVEAL' %}
+                    <div class="card mb-3 border-secondary shadow-sm text-center">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">🔮 Revealing Mission Results...</h5>
+                            
+                            <div id="quest-reveal-container" class="d-flex justify-content-center flex-wrap mt-4 mb-4">
+                                </div>
+
+                            <form method="POST" action="{% url 'advance_reveal' room.room_code %}" id="continue-reveal-form" style="display: none; opacity: 0; transition: opacity 1s;">
+                                {% csrf_token %}
+                                {% if request.user == room.current_leader.user %}
+                                    <button type="submit" class="btn btn-primary px-5 fw-bold">Continue Game</button>
+                                {% else %}
+                                    <p class="text-muted mb-0"><i class="bi bi-hourglass-split"></i> Waiting for leader to continue...</p>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const failsCount = {{ room.missions.last.fails_count|default:0 }};
+                            const teamSize = {{ room.missions.last.team_size|default:0 }};
+                            const successCount = teamSize - failsCount;
+
+                            // 1. Build tension array: Successes ALWAYS first, Fails ALWAYS last
+                            const results = [];
+                            for(let i=0; i<successCount; i++) results.push('SUCCESS');
+                            for(let i=0; i<failsCount; i++) results.push('FAIL');
+
+                            const container = document.getElementById("quest-reveal-container");
+
+                            // 2. Render all cards face-down
+                            results.forEach(vote => {
+                                const isSuccess = (vote === 'SUCCESS');
+                                const backClass = isSuccess ? 'success' : 'fail';
+                                const text = isSuccess ? 'PASS' : 'FAIL';
+
+                                container.innerHTML += `
+                                    <div class="quest-card">
+                                        <div class="quest-card-inner">
+                                            <div class="quest-card-front">Avalon</div>
+                                            <div class="quest-card-back ${backClass}">${text}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+
+                            // 3. Stagger the flips (1.5 seconds apart)
+                            const cards = document.querySelectorAll('.quest-card');
+                            let initialDelay = 1000; // Wait 1s before the first card flips
+                            let delayBetweenFlips = 1500;
+
+                            cards.forEach((card, index) => {
+                                setTimeout(() => {
+                                    card.classList.add('flipped');
+                                }, initialDelay + (index * delayBetweenFlips));
+                            });
+
+                            // 4. Reveal the Continue button gracefully at the very end
+                            setTimeout(() => {
+                                const form = document.getElementById('continue-reveal-form');
+                                form.style.display = 'block';
+                                // tiny timeout to allow display block to register before opacity fades in
+                                setTimeout(() => form.style.opacity = '1', 50); 
+                            }, initialDelay + (cards.length * delayBetweenFlips) + 800);
+                        });
+                    </script>
+                    
+                
+                {% elif room.current_phase == 'ASSASSIN_PHASE' %}
+
+                    <div id="assassination-timer" style="font-weight: bold; color: red;">
+                        Time Remaining: <span id="timer-display">05:00</span>
+                    </div>                     
+
+                    {% if player.role == 'Assassin' %}
+                        <div class="w-100 d-flex flex-column align-items-center">
+                            <p class="status-text text-danger mb-2">Good has passed 3 quests! Choose your assassination target.</p>
+                            <p class="text-muted small mb-3">Select <strong>1 player</strong> to guess Merlin, OR select <strong>2 players</strong> to guess the Lovers.</p>
+                            
+                            <form action="{% url 'assassinate' room.room_code %}" method="POST" class="w-100 d-flex flex-column align-items-center" id="assassin-form">
+                                {% csrf_token %}
+                                <div class="d-flex flex-wrap justify-content-center gap-3 mb-3">
+                                    {% for p in all_players %}
+                                        {% if p.is_good %} 
+                                        <div class="form-check border rounded px-4 py-2 bg-white">
+                                            <input class="form-check-input target-checkbox" type="checkbox" name="assassin_targets" value="{{ p.id }}" id="target-{{ p.id }}">
+                                            <label class="form-check-label fw-bold" for="target-{{ p.id }}">{{ p.user.username }}</label>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <button type="submit" class="btn btn-danger fw-bold px-5" id="assassinate-btn" disabled>ASSASSINATE</button>
+                            </form>
+                        </div>
+
+                        <script>
+                            // Enable button only if 1 or 2 targets are selected
+                            const checkboxes = document.querySelectorAll('.target-checkbox');
+                            const btn = document.getElementById('assassinate-btn');
+                            
+                            checkboxes.forEach(cb => {
+                                cb.addEventListener('change', () => {
+                                    const checkedCount = document.querySelectorAll('.target-checkbox:checked').length;
+                                    
+                                    // Disable checkboxes if they try to pick a 3rd person
+                                    checkboxes.forEach(box => {
+                                        if (!box.checked) box.disabled = (checkedCount >= 2);
+                                    });
+                                    
+                                    // Enable submit only for 1 or 2 targets
+                                    btn.disabled = (checkedCount === 0 || checkedCount > 2);
+                                });
+                            });
+                        </script>
+                    {% else %}
+                        <p class="status-text text-danger">The Assassin is making their final choice...</p>
+                    {% endif %}
+                
+                {% elif room.current_phase == 'GOOD_WINS' %}
+                    <div class="text-center animate-bounce">
+                            <h1 class="display-4 text-primary fw-black m-0" style="text-shadow: 2px 2px 10px rgba(13, 110, 253, 0.3);">GOOD WINS!</h1>
+                            <p class="status-text mt-2">Good wins! The Assassin is currently reconsidering all of their life choices.</p>
+
+                        <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+
+                            {% if player.user == room.host %}
+                            <form action="{% url 'play_again' room.room_code %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg fw-bold">
+                                    Play Again
+                                </button>
+                            </form>
+
+                            <form action="{% url 'delete_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to disband this lobby? All players will be kicked to the main menu.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-lg fw-bold">
+                                    <i class="bi bi-trash-fill"></i> Delete Game
+                                </button>
+                            </form>                            
+
+                            {% endif %}
+                            
+                            <form action="{% url 'leave_game' room.room_code %}" method="POST">
+                                {% csrf_token %}
+
+                                {% if player.user == room.host %}
+                                    <button type="submit" class="btn btn-outline-danger btn-lg fw-bold">
+                                        Transfer Hosting
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
+                                        Return to Lobby
+                                    </button>
+                                {% endif %}                                
+                            </form>
+                        </div>
+
+                            
+                    </div>
+                {% elif room.current_phase == 'EVIL_WINS' %}
+                    <div class="text-center animate-bounce">
+                        <h1 class="display-4 text-danger fw-black m-0" style="text-shadow: 2px 2px 10px rgba(220, 53, 69, 0.3);">EVIL WINS!</h1>
+                        {% if room.victory_reason == 'MERLIN_KILLED' %}
+                            <p class="text-danger fw-bold mt-2">Congrats, you killed Merlin!</p>
+                        {% elif room.victory_reason == 'LOVERS_KILLED' %}
+                            <p class="text-danger fw-bold mt-2">Congrats, you killed the Lovers!</p>
+                        {% else %}
+                            <p class="status-text mt-2">Let the accusations commence!</p>
+                        {% endif %}
+                        <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+
+                            {% if player.user == room.host %}
+                            <form action="{% url 'play_again' room.room_code %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg fw-bold">
+                                    Play Again
+                                </button>
+                            </form>
+
+                            <form action="{% url 'delete_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to disband this lobby? All players will be kicked to the main menu.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-lg fw-bold">
+                                    <i class="bi bi-trash-fill"></i> Delete Game
+                                </button>
+                            </form>                            
+
+                            {% endif %}
+                            
+                            <form action="{% url 'leave_game' room.room_code %}" method="POST">
+                                {% csrf_token %}
+
+                                {% if player.user == room.host %}
+                                    <button type="submit" class="btn btn-outline-danger btn-lg fw-bold">
+                                        Transfer Hosting
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-outline-primary btn-lg fw-bold">
+                                        Return to Lobby
+                                    </button>
+                                {% endif %}                                
+                            </form>                            
+
+                        </div>
+
+                    </div>
+                {% else %}
+                    <p class="status-text">Waiting for game to advance...</p>
+                {% endif %}
+            </div>
