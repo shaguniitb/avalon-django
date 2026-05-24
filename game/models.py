@@ -125,6 +125,9 @@ class Player(models.Model):
     # This naturally builds the chain! (Player A -> Player B -> Player C)
     lady_target = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='lady_received_from')
 
+    def __str__(self):
+        return self.user.username
+
 class Mission(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='missions')
     round_number = models.IntegerField()
