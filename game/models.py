@@ -31,6 +31,10 @@ class GameRoom(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True)
     rematch_code = models.CharField(max_length=6, null=True, blank=True)
 
+    def __str__(self):
+        formatted_time = self.created_at.strftime("%Y-%m-%d %H:%M") if self.created_at else "Unknown"
+        return f"Game room {self.room_code} led by {self.host.username}; created at {formatted_time}"        
+
     @property
     def hammer_player(self):
         """Calculates and returns the player who holds the hammer for the 5th vote."""
@@ -126,7 +130,7 @@ class Player(models.Model):
     lady_target = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='lady_received_from')
 
     def __str__(self):
-        return self.user.username
+        return f"{self.user.username} playing in {self.game}"
 
 class Mission(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='missions')
@@ -138,6 +142,9 @@ class Mission(models.Model):
     is_completed = models.BooleanField(default=False)
     did_succeed = models.BooleanField(null=True)
     fails_count = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"Round # {self.round_number} in {self.game}"    
 
 class TeamProposal(models.Model):
     game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='history_proposals')
