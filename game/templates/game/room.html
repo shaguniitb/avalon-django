@@ -612,100 +612,7 @@
 
     </div>
 
-    {% if history_headers %}
-    <div class="container mt-2 mb-5">
-        <!-- <h5 class="fw-bold mb-3 text-center border-bottom pb-2" style="max-width: 900px; margin: 0 auto;">Voting History</h5> -->
-    <div class="history-table-wrapper mt-5 bg-white border rounded">
-        <h5 class="text-center mb-0 py-3 fw-bold bg-light border-bottom">Voting History</h5>
-        
-        <table class="table table-sm table-bordered history-table shadow-sm mb-0" style="border-collapse: collapse;">
-            <colgroup class="mission-divider">
-                <col>
-            </colgroup>
-            
-            {% for header in history_headers %}
-                <colgroup span="{{ header.colspan }}" class="mission-divider"></colgroup>
-            {% endfor %}
-            
-            <thead>
-                <tr style="border-bottom: 3px solid #000000;">
-                    <th class="align-middle text-start ps-3 bg-light text-uppercase text-secondary" style="font-size: 0.9rem; letter-spacing: 1px;">Player</th>
-                    
-                    {% for header in history_headers %}
-                        <th colspan="{{ header.colspan }}" class="text-center text-uppercase py-2 text-dark bg-light" style="font-weight: 800; letter-spacing: 1px; font-size: 0.95rem;">
-                            Mission {{ header.round }}
-                        </th>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <th class="bg-light border-top"></th> 
-                    
-                    {% for attempt in attempt_numbers %}
-                        <th class="text-center text-muted small py-1 bg-light border-top" style="font-size: 0.8rem;">
-                            Vote {{ attempt }}
-                        </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            
-            <tbody>
-                {% for ph in player_history %}
-                <tr>
-                    <td class="fw-bold text-start ps-3 align-middle bg-white">{{ ph.player.user.username }}</td>
-                    
-                    {% for v in ph.votes %}
-                        <td class="{% if v.vote == 'approve' %}bg-vote-approve{% elif v.vote == 'reject' %}bg-vote-reject{% else %}bg-white{% endif %} position-relative p-0" style="min-width: 55px;">
-                            <div class="d-flex align-items-center justify-content-center w-100 h-100" style="min-height: 40px;">
-                                {% if v.is_leader %}
-                                    <span class="fs-6 me-1 leader-crown" title="Leader">👑</span>
-                                {% endif %}
-                                {% if v.on_team %}
-                                    <i class="bi bi-shield-fill team-shield" title="On Team"></i>
-                                {% endif %}
-                            </div>
-                        </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-        
-    <div class="mt-3 p-3 bg-white border rounded shadow-sm mx-auto" style="max-width: 1000px;">
-        <h6 class="fw-bold mb-3 text-muted text-uppercase" style="letter-spacing: 1px; font-size: 0.85rem;">How to read this table</h6>
-        <div class="d-flex flex-wrap gap-4 align-items-center">
-            
-            <div class="d-flex align-items-center">
-                <div class="bg-vote-approve border border-dark rounded" style="width: 28px; height: 28px;"></div>
-                <span class="ms-2 fw-bold text-dark">= Approve</span>
-            </div>
-            
-            <div class="d-flex align-items-center">
-                <div class="bg-vote-reject border border-dark rounded" style="width: 28px; height: 28px;"></div>
-                <span class="ms-2 fw-bold text-dark">= Reject</span>
-            </div>
-
-            <div class="d-flex align-items-center">
-                <div class="bg-light border border-dark rounded d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background-color: #343a40 !important;">
-                    <i class="bi bi-shield-fill team-shield" style="font-size: 1rem; text-shadow: none;"></i>
-                </div>
-                <span class="ms-2 fw-bold text-dark">= On Proposed Team</span>
-            </div>
-
-            
-            <div class="d-flex align-items-center">
-                <div class="bg-light border border-dark rounded d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
-                    <span class="fs-6 leader-crown">👑</span>
-                </div>
-                <span class="ms-2 fw-bold text-dark">= Team Leader</span>
-            </div>
-            
-        </div>
-    </div>
-    
-
-    </div>
-    {% endif %}
+{% include 'game/partials/vote_history.html' %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>   
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -1054,7 +961,6 @@
             window.location.href = path + '?t=' + new Date().getTime(); 
         }
     });
-
 
 </script>
 </body>
