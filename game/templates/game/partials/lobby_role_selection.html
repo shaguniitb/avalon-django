@@ -1,0 +1,55 @@
+<div class="status-strip" id="lobby-action-strip" style="flex-direction: column;">
+    {% if player.user == room.host %}
+        <p class="status-text mb-2">Game Lobby - {{ all_players.count }} Player{% if all_players.count != 1 %}s{% endif %} Joined</p>
+        
+        <form action="{% url 'start_game' room.room_code %}" method="POST" class="d-flex flex-column align-items-center w-100 m-0">
+            {% csrf_token %}
+            
+            <div class="d-flex gap-4 mb-3 flex-wrap justify-content-center bg-white p-3 rounded border w-100" style="max-width: 600px;">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" checked disabled id="roleMerlin">
+                    <label class="form-check-label fw-bold text-primary" for="roleMerlin">Merlin (Mandatory)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="special_roles" value="Percival" id="rolePercival">
+                    <label class="form-check-label fw-bold text-primary" for="rolePercival">Percival</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="special_roles" value="Lovers" id="roleLovers">
+                    <label class="form-check-label fw-bold text-primary" for="roleLovers">Lovers (+2 Players)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" checked disabled id="roleAssassin">
+                    <label class="form-check-label fw-bold text-danger" for="roleAssassin">Assassin (Mandatory)</label>
+                </div>                                                                                                    
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="special_roles" value="Morgana" id="roleMorgana">
+                    <label class="form-check-label fw-bold text-danger" for="roleMorgana">Morgana</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="special_roles" value="Mordred" id="roleMordred">
+                    <label class="form-check-label fw-bold text-danger" for="roleMordred">Mordred</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="special_roles" value="Oberon" id="roleOberon">
+                    <label class="form-check-label fw-bold text-danger" for="roleOberon">Oberon</label>
+                </div>
+                <div class="form-check mb-3 text-start">
+                        <input class="form-check-input" type="checkbox" id="useLady" name="use_lady">
+                        <label class="form-check-label" for="useLady">
+                            🧜‍♀️ Include Lady of the Lake
+                        </label>
+                </div>                            
+            </div>
+
+            {% if all_players.count >= 5 and all_players.count <= 10 %}
+                <button type="submit" class="btn btn-success btn-lg fw-bold px-5 shadow-sm">START GAME</button>
+            {% else %}
+                <div class="alert alert-warning py-2 mb-2 w-100 text-center fw-bold" style="max-width: 600px;">Avalon requires 5 to 10 players.</div>
+                <button type="button" class="btn btn-secondary btn-lg fw-bold px-5" disabled>WAITING FOR PLAYERS</button>
+            {% endif %}
+        </form>
+    {% else %}
+        <p class="status-text">Waiting for host to start the game... ({{ all_players.count }} Players joined)</p>
+    {% endif %}
+</div>
