@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{% static 'css/room.css' %}">
 </head>
+
 <body class="py-4 phase-{{ room.current_phase }}">
 
     <div style="text-align: right; margin-bottom: 20px; margin-right: 100px;">
@@ -20,157 +21,9 @@
 
     <div class="container mt-2 mt-md-5 px-1 px-sm-3" style="max-width: 950px;">        
         
-        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-            <h1 class="h4 mb-0 fw-bold d-flex align-items-center gap-2">
-                Room: <span class="text-primary">{{ room.room_code }}</span>            
-            {% if request.user == room.host %}
-                <span class="badge bg-warning text-dark border border-dark rounded-pill shadow-sm ms-2 px-3 py-2">
-                    <i class="bi bi-star-fill"></i> You are the Host
-                </span>
-            </h1>                
-            {% endif %}
+        {% include 'game/partials/room_header.html' %}
 
-            {% if is_spectator %}
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-warning text-dark"> SPECTATING </span>
-                    
-                    {% if room.current_phase == 'LOBBY' %}
-                        <form action="{% url 'join_as_player' room.room_code %}" method="POST" class="m-0">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success btn-sm fw-bold">
-                                <i class="bi bi-person-plus-fill"></i> Join as Player
-                            </button>
-                        </form>
-                    {% endif %}
-                </div>
-            {% endif %}
-
-            <div class="d-flex align-items-center gap-2">
-                {% if request.user == room.host and room.current_phase != 'LOBBY' and room.current_phase != 'GOOD_WINS' and room.current_phase != 'EVIL_WINS' %}
-                    <form action="{% url 'end_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to end this game early? All progress will be lost and players will be returned to the lobby.');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger btn-sm fw-bold">End Game</button>
-                    </form>
-                {% endif %}
-
-                {% if request.user == room.host and not is_spectator %}
-                    {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' %}
-                        <form action="{% url 'delete_game' room.room_code %}" method="POST" onsubmit="return confirm('Are you sure you want to delete this game? All players will be kicked back to the lobby browser.');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger btn-sm fw-bold">Delete Game</button>
-                        </form>
-                    {% endif %}
-                {% endif %}                
-
-                {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' or is_spectator %}
-                    <form action="{% url 'leave_game' room.room_code %}" method="POST">
-                        {% csrf_token %}
-                        {% if request.user == room.host and not is_spectator %}
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Transfer hosting</button>
-                        {% else %}
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
-                        {% endif %}
-                    </form>
-                {% endif %}                
-    
-                <!-- {% if room.current_phase == 'LOBBY' or room.current_phase == 'GOOD_WINS' or room.current_phase == 'EVIL_WINS' or is_spectator %}
-                    <form action="{% url 'leave_game' room.room_code %}" method="POST">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-danger btn-sm">Leave Game</button>
-                    </form>
-                {% endif %} -->
-            </div>
-       
-        </div>
-        
-        {% if room.current_phase != 'LOBBY' %}
-            <div class="bg-light p-3 rounded mb-4 border">
-                <strong class="text-dark">Roles in this Game:</strong> 
-                {% for role in room.roles_in_play %}
-                    <span style="font-weight: bold; color: {% if role.is_evil %}red{% else %}blue{% endif %};">{{ role.name }}</span>{% if not forloop.last %}, {% endif %}
-                {% endfor %}                
-            </div>
-        {% if spectators %}
-        <div class="d-flex justify-content-center align-items-center flex-wrap gap-2 mt-4 mb-3">
-            <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 1px;">
-                <i class="bi bi-eye-fill"></i> Spectators:
-            </span>
-            {% for spec in spectators %}
-                <span class="badge bg-secondary rounded-pill shadow-sm px-3 py-1">
-                    {{ spec.user.username }}
-                </span>
-            {% endfor %}
-        </div>
-        {% endif %}                    
-        {% endif %}        
-
-
-        {% if lady_chain|length > 1 %}
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-info py-2 mb-0 text-center shadow-sm border-info border-opacity-50">
-                        <strong class="text-info-emphasis">🧜‍♀️ Lady of the Lake Chain</strong><br>
-                        <div class="mt-1">
-                            {% for name in lady_chain %}
-                                <span class="fw-bold">{{ name }}</span>
-                                {% if not forloop.last %}
-                                    <i class="bi bi-arrow-right mx-2 text-secondary"></i>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% endif %}                        
-
-        <div class="container mt-3" id="message-container">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}info{% endif %} alert-dismissible fade show" role="alert">
-                    {% if message.tags == 'success' %}
-                        <i class="bi bi-check-circle-fill me-2"></i>
-                    {% elif message.tags == 'error' or message.tags == 'danger' %}
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    {% else %}
-                        <i class="bi bi-info-circle-fill me-2"></i>
-                    {% endif %}
-                    
-                    <strong>{{ message }}</strong>
-                    
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-        </div>
-
-        {% if spectator_spoilers %}
-        <div class="accordion mb-4 shadow-sm" id="accordionSpoilers">
-            <div class="accordion-item border-danger">
-                <h2 class="accordion-header" id="headingSpoilers">
-                    <button class="accordion-button collapsed bg-danger text-white fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSpoilers" aria-expanded="false" aria-controls="collapseSpoilers">
-                        <i class="bi bi-incognito me-2"></i> Spectator Cheat Sheet (Spoilers!)
-                    </button>
-                </h2>
-                <div id="collapseSpoilers" class="accordion-collapse collapse" aria-labelledby="headingSpoilers" data-bs-parent="#accordionSpoilers">
-                    <div class="accordion-body bg-light p-0">
-                        <ul class="list-group list-group-flush">
-                            {% for username, role in spectator_spoilers.items %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span class="fw-semibold">{{ username }}</span>
-                                    
-                                    {% if role == 'Merlin' or role == 'Percival' or role == 'Lover' or role == 'Lovers' or role == 'Loyal Servant of Arthur' %}
-                                        <span class="badge bg-primary rounded-pill px-3 py-2">{{ role }}</span>
-                                    {% else %}
-                                        <span class="badge bg-danger rounded-pill px-3 py-2">{{ role }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}        
+        {% include 'game/partials/messages.html' %}
 
         <div class="table-container">
             
