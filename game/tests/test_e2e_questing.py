@@ -108,14 +108,14 @@ class QuestingE2ETests(ChannelsLiveServerTestCase):
                 success_btn.wait_for(state="visible", timeout=5000)
                 success_btn.click()
 
-            print("[TEST INFO] Waiting for mission reveal animation...")  
+            print("[TEST INFO] Waiting for mission reveal animation and auto-advance...")  
 
-            continue_btn = leader_page.get_by_role("button", name="Continue Game")
-            continue_btn.wait_for(state="visible", timeout=10000)
-            continue_btn.click()                          
+            # The "Continue Game" button was removed. The animation takes ~4.5 seconds 
+            # for 2 players, followed by a 5-second auto-submit countdown.
+            # We just pause the test for 12 seconds to let the frontend drive the transition.
+            pages[0].wait_for_timeout(12000)
                 
             # 6. Verify Round Advancement
-            pages[0].wait_for_timeout(1000)
             self.room.refresh_from_db()
             
             self.assertEqual(self.room.score_good, 1, "Good's score should have increased by 1.")
