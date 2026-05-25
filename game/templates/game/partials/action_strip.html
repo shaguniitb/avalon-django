@@ -119,14 +119,16 @@
                 <div id="quest-reveal-container" class="d-flex justify-content-center flex-wrap mt-4 mb-4">
                     </div>
 
-                <form method="POST" action="{% url 'advance_reveal' room.room_code %}" id="continue-reveal-form" style="display: none; opacity: 0; transition: opacity 1s;">
-                    {% csrf_token %}
-                    {% if request.user == room.current_leader.user %}
-                        <button type="submit" class="btn btn-primary px-5 fw-bold">Continue Game</button>
-                    {% else %}
-                        <p class="text-muted mb-0"><i class="bi bi-hourglass-split"></i> Waiting for leader to continue...</p>
-                    {% endif %}
-                </form>
+                <div id="auto-advance-msg" style="display: none; opacity: 0; transition: opacity 1s;">
+                    <p class="text-muted fw-bold mb-0">Advancing to the next phase in <span id="reveal-countdown">3</span>...</p>
+                </div>                    
+
+                {% if request.user == room.current_leader.user %}
+                    <form method="POST" action="{% url 'advance_reveal' room.room_code %}" id="auto-continue-form" style="display: none;">
+                        {% csrf_token %}
+                    </form>
+                {% endif %}                
+
             </div>
         </div>
 
@@ -171,12 +173,37 @@
                 });
 
                 // 4. Reveal the Continue button gracefully at the very end
+
+
                 setTimeout(() => {
-                    const form = document.getElementById('continue-reveal-form');
-                    form.style.display = 'block';
-                    // tiny timeout to allow display block to register before opacity fades in
-                    setTimeout(() => form.style.opacity = '1', 50); 
-                }, initialDelay + (cards.length * delayBetweenFlips) + 800);
+                    // Fade in the text
+                    const msgDiv = document.getElementById('auto-advance-msg');
+                    if (msgDiv) {
+                        msgDiv.style.display = 'block';
+                        setTimeout(() => msgDiv.style.opacity = '1', 50); 
+                    }
+
+                    // Start the 5-second countdown
+                    let timeLeft = 3;
+                    const countdownEl = document.getElementById('reveal-countdown');
+                    const formEl = document.getElementById('auto-continue-form');
+                    
+                    const timer = setInterval(() => {
+                        timeLeft--;
+                        if (countdownEl) {
+                            countdownEl.innerText = timeLeft;
+                        }
+                        
+                        if (timeLeft <= 0) {
+                            clearInterval(timer);
+                            // If this player is the leader, submit the form!
+                            if (formEl) {
+                                formEl.submit();
+                            }
+                        }
+                    }, 1000);
+
+                }, initialDelay + (cards.length * delayBetweenFlips) + 800);                
             });
         </script>
         
