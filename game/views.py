@@ -10,7 +10,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.db import models
 from django.utils import timezone
-from .models import GameRoom, Player, Spectator
+from .models import GameRoom, Player, Spectator, UserProfile
 from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room, get_top_players
 
 from channels.layers import get_channel_layer
@@ -43,6 +43,29 @@ def broadcast_game_update(room_code):
             'type': 'game_update'
         }
     )
+
+@login_required
+def profile(request):
+    # Fetch the user's profile
+    user_profile = request.user.profile
+    
+    if request.method == 'POST':
+        # Retrieve data from the submitted form
+        display_name = request.POST.get('display_name')
+        favorite_role = request.POST.get('favorite_role')
+        
+        # Update the database
+        user_profile.display_name = display_name
+        user_profile.favorite_role = favorite_role
+        user_profile.save()
+        
+        messages.success(request, "Your profile has been successfully updated!")
+        return redirect('profile')
+        
+    return render(request, 'game/profile.html', {
+        'profile': user_profile,
+        'role_choices': UserProfile.ROLE_CHOICES
+    })    
 
 @login_required
 def home(request):

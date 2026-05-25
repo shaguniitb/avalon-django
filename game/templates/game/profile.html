@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - Avalon{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h4 class="mb-0">Edit Profile</h4>
+                </div>
+                <div class="card-body p-4">
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-success">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="display_name" class="form-label fw-bold">Display Name</label>
+                            <input type="text" class="form-control" id="display_name" name="display_name" 
+                                   value="{{ profile.display_name|default_if_none:'' }}" 
+                                   placeholder="Enter custom name (max 30 chars)">
+                            <div class="form-text">Custom name shown in lobbies and leaderboards. If left blank, it defaults to your username.</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="favorite_role" class="form-label fw-bold">Favorite Role</label>
+                            <select class="form-select" id="favorite_role" name="favorite_role">
+                                <option value="">-- Select a favorite role --</option>
+                                {% for code, name in role_choices %}
+                                    <option value="{{ code }}" {% if profile.favorite_role == code %}selected{% endif %}>
+                                        {{ name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Your preferred Avalon role to display on your stats page.</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 py-2">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

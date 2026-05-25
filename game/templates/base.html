@@ -12,6 +12,48 @@
 </head>
 <body class="{% block body_class %}bg-light{% endblock %}">
 
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="bi bi-house-door-fill me-1"></i>Avalon
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    {% if user.is_authenticated %}
+                    
+                    <li class="nav-item me-3">
+                        <span class="navbar-text text-light">
+                            Logged in as <strong>{{ user.username }}</strong>
+                        </span>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'profile' %}">My Profile</a>
+                    </li>
+                    
+                    {% if request.resolver_match.url_name != 'player_statistics' %}
+                    <li class="nav-item">
+                        <a class="nav-link text-info" href="{% url 'player_statistics' user.username %}">
+                            <i class="bi bi-bar-chart-fill"></i> My Stats
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="nav-item ms-lg-3 mt-2 mt-lg-0">
+                        <form action="{% url 'logout' %}" method="POST" class="m-0 p-0">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Log Out</button>
+                        </form>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
     {% block content %}
     {% endblock %}
 

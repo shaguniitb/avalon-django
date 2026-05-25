@@ -11,14 +11,6 @@
 
 {% block content %}
 
-    <div style="text-align: right; margin-bottom: 20px; margin-right: 100px;">
-        Logged in as <strong>{{ user.username }}</strong> | 
-        <form action="{% url 'logout' %}" method="POST" style="display: inline;">
-            {% csrf_token %}
-            <button type="submit" style="background: none; border: none; color: blue; text-decoration: underline; cursor: pointer; padding: 0; font: inherit;">Log Out</button>
-        </form>
-    </div>    
-
     <div class="container mt-2 mt-md-5 px-1 px-sm-3" style="max-width: 950px;">        
         
         {% include 'game/partials/room_header.html' %}
