@@ -114,7 +114,7 @@
                                 </strong>
                                 <span class="text-muted fst-italic">
                                     {% for p in lobby.players.all %}
-                                        {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                        {{ p.user.profile.name }}{% if not forloop.last %}, {% endif %}
                                     {% endfor %}
                                 </span>
                             </small>

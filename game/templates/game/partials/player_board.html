@@ -177,7 +177,7 @@
 
                 <div class="username-container">
                     <div class="username-text {% if p == player %}is-me-name{% endif %}">
-                        {{ p.user.username }} {% if p == player %}<span style="font-size: 0.75rem; font-weight: 900;">(YOU)</span>{% endif %}
+                        {{ p.user.profile.name }} {% if p == player %}<span style="font-size: 0.75rem; font-weight: 900;">(YOU)</span>{% endif %}
                     </div>                            
 
                     {% if room.current_phase == 'EVIL_WINS' or room.current_phase == 'GOOD_WINS' %}

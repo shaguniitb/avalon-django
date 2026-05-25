@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import GameRoom, Player, Mission
+from .models import GameRoom, Player, Mission, UserProfile
 
 # 1. Create an Inline so players appear directly inside the GameRoom detail page
 class PlayerInline(admin.TabularInline):
@@ -47,6 +47,11 @@ class GameRoomAdmin(admin.ModelAdmin):
     
     get_player_links.short_description = "Players in Room"
 
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'display_name', 'favorite_role', 'is_test_account')
+    list_editable = ('display_name', 'favorite_role', 'is_test_account')
+    search_fields = ('user__username', 'display_name')
 
 # Register your remaining models normally
 admin.site.register(Player)

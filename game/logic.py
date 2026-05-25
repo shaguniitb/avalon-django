@@ -3,7 +3,7 @@ import random
 import string
 from django.utils import timezone
 from django.contrib.auth.models import User
-from .models import GameRoom, Player, Mission, TeamProposal
+from .models import GameRoom, Player, Mission, TeamProposal, UserProfile
 
 # Dictionary defining (Good, Evil) counts based on total players
 AVALON_DISTRIBUTION = {
@@ -248,6 +248,8 @@ def get_top_players(limit=5):
     # Grab all users who have participated in a completed game
     users_with_games = User.objects.filter(
         player__game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+    ).exclude(
+        profile__is_test_account = True # Filters test accounts
     ).distinct()
     
     for u in users_with_games:
@@ -270,7 +272,7 @@ def get_top_players(limit=5):
             win_rate = wins / games_played
             
             top_players.append({
-                'username': u.username,
+                'username': u.profile.name,
                 'games': games_played,
                 'win_rate_val': win_rate,
                 'win_rate_str': f"{int(win_rate * 100)}%"

@@ -1,5 +1,51 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class UserProfile(models.Model):
+    # Available roles pulled directly from the game's assignment logic
+    ROLE_CHOICES = [
+        ('Merlin', 'Merlin'),
+        ('Percival', 'Percival'),
+        ('Lover', 'Lover'),
+        ('Loyal Servant of Arthur', 'Loyal Servant of Arthur'),
+        ('Morgana', 'Morgana'),
+        ('Mordred', 'Mordred'),
+        ('Assassin', 'Assassin'),
+        ('Minion of Mordred', 'Minion of Mordred'),
+        ('Oberon', 'Oberon'),
+    ]
+    # Using related_name='profile' lets you do request.user.profile instead of request.user.userprofile
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    is_test_account = models.BooleanField(default=False)
+    
+    # 1. Display Name Field
+    display_name = models.CharField(
+        max_length=30, 
+        blank=True, 
+        null=True, 
+        help_text="Custom name shown in lobbies and leaderboards."
+    )
+
+    # Favorite Role field
+    favorite_role = models.CharField(
+        max_length=50,
+        choices=ROLE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Your preferred Avalon role to display on your stats page."
+    )    
+
+    # Automatically fall back to username if display_name is empty
+    @property
+    def name(self):
+        if self.display_name and self.display_name.strip():
+            return self.display_name
+        return self.user.username
+
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
 
 class GameRoom(models.Model):
     room_code = models.CharField(max_length=6, unique=True)
@@ -166,3 +212,14 @@ class Spectator(models.Model):
 
     class Meta:
         unique_together = ('user', 'game')    
+
+
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+    else:
+        # get_or_create ensures existing users retroactively get a profile if saved
+        profile, _ = UserProfile.objects.get_or_create(user=instance)
+        profile.save()        
+    instance.profile.save()        

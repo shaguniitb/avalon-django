@@ -822,7 +822,7 @@ def player_statistics(request, username):
     completed_games = Player.objects.filter(
         user=target_user,
         game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
-    ).select_related('game').prefetch_related('game__players__user').order_by('-game__created_at')
+    ).select_related('game').prefetch_related('game__players__user__profile').order_by('-game__created_at')
 
     total_games = 0
     total_wins = 0
@@ -870,17 +870,18 @@ def player_statistics(request, username):
                 continue # Skip themselves
                 
             cp_username = co_player.user.username
+            cp_name = co_player.user.profile.name
             
             if co_player.is_good == player.is_good:
                 # They were on the same team
                 if cp_username not in teammates:
-                    teammates[cp_username] = {'games': 0, 'wins': 0}
+                    teammates[cp_username] = {'name': cp_name, 'games': 0, 'wins': 0}
                 teammates[cp_username]['games'] += 1
                 if won: teammates[cp_username]['wins'] += 1
             else:
                 # They were on opposite teams
                 if cp_username not in enemies:
-                    enemies[cp_username] = {'games': 0, 'wins': 0}
+                    enemies[cp_username] = {'name': cp_name, 'games': 0, 'wins': 0}
                 enemies[cp_username]['games'] += 1
                 if won: enemies[cp_username]['wins'] += 1
 
