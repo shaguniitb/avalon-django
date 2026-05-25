@@ -184,6 +184,14 @@
                         <div class="secret-role-text {% if p.is_good %}text-primary{% else %}text-danger{% endif %}">
                             {{ p.role }}
                         </div>                            
+
+                    {% elif room.current_phase == 'ASSASSIN_PHASE' %}
+                        {% if not p.is_good %}
+                            <div class="secret-role-text text-danger">{{ p.role }}</div>
+                        {% elif p == player %}
+                            <div class="secret-role-text text-primary">{{ player.role }}</div>
+                        {% endif %}                        
+
                     {% elif p == player and room.current_phase != 'LOBBY' %}
                         <div class="secret-role-text {% if p.is_good %}text-primary{% else %}text-danger{% endif %}">{{ player.role }}</div>
                     {% endif %}
