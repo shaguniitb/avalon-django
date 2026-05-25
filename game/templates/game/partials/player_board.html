@@ -1,6 +1,9 @@
 <div class="table-container">
     
+    <!--         Table Center       -->
     <div id="center-info">
+
+        <!-- Phase Label -->
         <span class="badge bg-dark mb-3 px-3 py-2 text-uppercase" style="letter-spacing: 1px;">
             Phase: 
             {% if room.current_phase == 'LOBBY' %}Lobby
@@ -14,11 +17,14 @@
             {% elif room.current_phase == 'ASSASSIN_PHASE' %}Assassin Phase
             {% else %}{{ room.current_phase }}{% endif %}
         </span>
+
+        <!-- Five Squares in the Center -->
         
         <div class="d-flex justify-content-center gap-3">
-            
-            <div class="d-flex flex-column align-items-center">
 
+            <!-- First Square -->
+
+            <div class="d-flex flex-column align-items-center">
                 <div class="mission-square bg-white text-dark {% if room.current_round == 1 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                     {% for m in room.missions.all %}{% if m.round_number == 1 %}
                         {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 1 %}
@@ -28,7 +34,6 @@
                     {% endif %}{% endfor %}">
                     {% if all_players.count < 8 %}2{% else %}3{% endif %}
                 </div>
-
                 <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
                     {% for m in room.missions.all %}{% if m.round_number == 1 and m.fails_count > 0 %}
                         {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 1 %}
@@ -37,6 +42,8 @@
                     {% endif %}{% endfor %}
                 </div>                        
             </div>
+
+            <!-- Second Square -->
             
             <div class="d-flex flex-column align-items-center">
                 <div class="mission-square bg-white text-dark {% if room.current_round == 2 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
@@ -57,6 +64,8 @@
                 </div>
             </div>
 
+            <!-- Third Square -->
+
             <div class="d-flex flex-column align-items-center">
                 <div class="mission-square bg-white text-dark {% if room.current_round == 3 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                     {% for m in room.missions.all %}{% if m.round_number == 3 %}
@@ -76,8 +85,10 @@
                 </div>
             </div>
 
+            <!-- Fourth Square -->
+
             <div class="d-flex flex-column align-items-center">
-                <div class="mission-square bg-white text-dark {% if room.current_round == 4 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
+                <div class="mission-square position-relative bg-white text-dark {% if room.current_round == 4 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
                     {% for m in room.missions.all %}{% if m.round_number == 4 %}
                         {% if room.current_phase != 'QUEST_REVEAL' or room.current_round != 4 %}
                             {% if m.did_succeed %}background-color: #0d6efd !important; color: white !important; border-color: #0d6efd !important;
@@ -85,6 +96,13 @@
                         {% endif %}
                     {% endif %}{% endfor %}">
                     {% if all_players.count < 7 %}3{% elif all_players.count == 7 %}4{% else %}5{% endif %}
+
+                    {% if all_players.count >= 7 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white" 
+                              style="font-size: 0.55rem; padding: 0.35em 0.5em; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                            2F
+                        </span>
+                    {% endif %}                    
                 </div>
                 <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem; height: 16px;">
                     {% for m in room.missions.all %}{% if m.round_number == 4 and m.fails_count > 0 %}
@@ -94,6 +112,8 @@
                     {% endif %}{% endfor %}
                 </div>
             </div>
+
+            <!-- Fifth Square -->
 
             <div class="d-flex flex-column align-items-center">
                 <div class="mission-square bg-white text-dark {% if room.current_round == 5 %}active-mission{% endif %}" style="border: 2px solid #6c757d; 
