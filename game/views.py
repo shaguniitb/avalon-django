@@ -537,46 +537,38 @@ def leave_game(request, room_code):
         player = room.players.get(user=request.user)
     except Player.DoesNotExist:
         return redirect('home')
+    
+    # Do not delete players if the game is over! <---
+    # This preserves their data for the statistics page.
+    if room.current_phase == 'LOBBY':
+        is_host = (room.host == request.user)
+            
+        # 2. Transfer host ownership
+        if is_host:
+            # EXCLUDE the leaving player so we don't accidentally make them the new host
+            new_host = room.players.exclude(id=player.id).order_by('seat_order', 'id').first()
+            if new_host:
+                room.host = new_host.user
+                room.save()
+            else:
+                # If no players are left, break the final cycle and delete the room
+                room.current_leader = None
+                room.save()
+                room.delete()
+                return redirect('home')            
 
-    is_host = (room.host == request.user)
-
-    # 1. Break Foreign Key cycles manually to avoid SQLite IntegrityErrors!
-    if room.current_leader == player:
-        room.current_leader = None
-        room.save()
-        
-    # Remove player from the proposed team if they are on it
-    if player in room.proposed_team.all():
-        room.proposed_team.remove(player)
-        
-    # Clear any historical TeamProposal references to this player
-    player.history_led.update(leader=None)
-
-    # 2. Transfer host ownership
-    if is_host:
-        # EXCLUDE the leaving player so we don't accidentally make them the new host
-        new_host = room.players.exclude(id=player.id).order_by('seat_order', 'id').first()
-        if new_host:
-            room.host = new_host.user
-            room.save()
-        else:
-            # If no players are left, break the final cycle and delete the room
-            room.current_leader = None
-            room.save()
+        # 3. Safe to delete the player now
+        player.delete()
+    
+        # 4. Check if the room is now completely empty. If so, delete it.
+        if not room.players.exists():
             room.delete()
-            return redirect('home')            
-
-    # 3. Safe to delete the player now
-    player.delete()
+            return redirect('home')
     
-    # 4. Check if the room is now completely empty. If so, delete it.
-    if not room.players.exists():
-        room.delete()
-        return redirect('home')
-    
-    # Broadcast to other players so their screens update
-    broadcast_game_update(room_code)
+        # Broadcast to other players so their screens update
+        broadcast_game_update(room_code)
 
+    # We can just redirect them. The record stays in the DB forever for stats.
     return redirect('home')
 
 def kick_player(request, room_code, player_id):
