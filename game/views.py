@@ -135,7 +135,7 @@ def home(request):
     available_lobbies = GameRoom.objects.filter(
         current_phase='LOBBY',
         is_active = True,
-        ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
+        ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user__profile', 'host')
 
     # Fetch ongoing games that the user IS NOT in
     # (Exclude LOBBY, finished phases, and aborted games)
@@ -145,7 +145,7 @@ def home(request):
         current_phase__in=['LOBBY', 'GOOD_WINS', 'EVIL_WINS', 'ABORTED']
     ).exclude(
         players__user=request.user
-    ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user', 'host')
+    ).annotate(num_players=Count('players')).filter(num_players__gt=0).prefetch_related('players__user__profile', 'host')
 
 
     # Fetch the ongoing game that the user IS in (for the Rejoin button)
@@ -219,7 +219,7 @@ def game_room(request, room_code):
         
         # Walk backwards up the chain using the reverse ForeignKey manager!
         while curr:
-            lady_chain.append(curr.user.username)
+            lady_chain.append(curr.user.profile.name)
             curr = curr.lady_received_from.first()
             
         # Reverse the list so it displays in chronological forward order
@@ -291,7 +291,7 @@ def game_room(request, room_code):
     if is_spectator and room.allow_spectator_spoilers and room.current_phase != 'LOBBY':
         # Create a simple dictionary mapping usernames to their true roles
         spectator_spoilers = {
-            p.user.username: p.role for p in all_players
+            p.user.profile.name: p.role for p in all_players
         }    
 
     is_lady_turn = False
@@ -532,7 +532,7 @@ def assassinate(request, room_code):
             messages.error(request, "Please select a valid target for assassination.")
             return redirect('game_room', room_code=room_code)        
         
-        target_names = " and ".join([p.user.username for p in target_players])
+        target_names = " and ".join([p.user.profile.name for p in target_players])
         
         # Ensure they picked either exactly 1 or exactly 2 people
         if len(target_ids) in [1, 2]:
@@ -790,12 +790,12 @@ def use_lady(request, room_code):
 
     # 2. Send the private result to the person who checked using pending_message
     alignment = "GOOD" if target_player.is_good else "EVIL"
-    player.pending_message = f"🧜‍♀️ The Lady reveals that {target_player.user.username}'s alignment is {alignment}!"
+    player.pending_message = f"🧜‍♀️ The Lady reveals that {target_player.user.profile.name}'s alignment is {alignment}!"
     player.save(update_fields=['pending_message'])
     
     # 3. Broadcast public generic alert to the rest of the room
     room.players.exclude(id=player.id).update(
-        pending_message=f"🧜‍♀️ {player.user.username} used the Lady of the Lake on {target_player.user.username}."
+        pending_message=f"🧜‍♀️ {player.user.profile.name} used the Lady of the Lake on {target_player.user.profile.name}."
     )
     
     broadcast_game_update(room_code)

@@ -39,7 +39,7 @@
                         <tr>
                             <td class="fw-bold">
                                 <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
-                                    {{ player.username }}
+                                    {{ player.profilename }}
                                 </a>
                             </td>
                             <td>{{ player.games }}</td>
@@ -82,7 +82,7 @@
                         
                         <div class="pe-3">
                             <h4 class="mb-1 text-primary d-flex align-items-center gap-2">
-                                Game hosted by {{ lobby.host.username }}
+                                Game hosted by {{ lobby.host.profile.name }}
                                 <span class="badge bg-secondary font-monospace" style="letter-spacing: 2px; font-size: 0.8rem;">
                                     {{ lobby.room_code }}
                                 </span>
@@ -134,7 +134,7 @@
 
                         <div class="pe-3">
                             <h4 class="mb-1 text-danger d-flex align-items-center gap-2">
-                                Live Game hosted by {{ game.host.username }}
+                                Live Game hosted by {{ game.host.profile.name }}
                                 <span class="badge bg-secondary font-monospace" style="letter-spacing: 2px; font-size: 0.8rem;">
                                     {{ game.room_code }}
                                 </span>
@@ -147,7 +147,7 @@
                                 </strong>
                                 <span class="text-muted fst-italic">
                                     {% for p in game.players.all %}
-                                        {{ p.user.username }}{% if not forloop.last %}, {% endif %}
+                                        {{ p.user.profile.name }}{% if not forloop.last %}, {% endif %}
                                     {% endfor %}
                                 </span>
                             </small>

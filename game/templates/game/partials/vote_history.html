@@ -37,7 +37,7 @@
                 <tbody>
                     {% for ph in player_history %}
                     <tr>
-                        <td class="fw-bold text-start ps-3 align-middle bg-white">{{ ph.player.user.username }}</td>
+                        <td class="fw-bold text-start ps-3 align-middle bg-white">{{ ph.player.user.profile.name }}</td>
                         
                         {% for v in ph.votes %}
                             <td class="{% if v.vote == 'approve' %}bg-vote-approve{% elif v.vote == 'reject' %}bg-vote-reject{% else %}bg-white{% endif %} position-relative p-0" style="min-width: 55px;">

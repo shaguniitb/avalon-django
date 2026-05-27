@@ -6,7 +6,7 @@
                 <div class="alert alert-info text-center shadow-sm">
                     <strong>🧜‍♀️ Waiting on the Lady of the Lake...</strong><br>
                     {% if player == room.current_leader %}
-                        <span class="small">You cannot propose a team until {{ room.current_lady_holder.user.username }} has used the Lady.</span>
+                        <span class="small">You cannot propose a team until {{ room.current_lady_holder.user.profile.name }} has used the Lady.</span>
                     {% endif %}
                 </div>
             {% endif %}
@@ -26,7 +26,7 @@
                     <button type="submit" id="propose-team-btn" class="btn btn-primary fw-bold px-4" disabled>OK</button>
                 </form>
             {% else %}
-                <p class="status-text">{{ room.current_leader.user.username }} is choosing the mission team ...</p>
+                <p class="status-text">{{ room.current_leader.user.profile.name }} is choosing the mission team ...</p>
             {% endif %}
         {% endif %}
 
@@ -41,7 +41,7 @@
                                 <option value="">Select a player...</option>
                                 {% for p in all_players %}
                                     {% if p.id not in past_lady_ids %}
-                                        <option value="{{ p.id }}">{{ p.user.username }}</option>
+                                        <option value="{{ p.id }}">{{ p.user.profile.name }}</option>
                                     {% endif %}
                                 {% endfor %}
                             </select>
@@ -57,10 +57,10 @@
         {% if not player.has_voted %}
             <p class="status-text" id="proposed-players-text"></p>
             <script>
-                const proposed = [{% for tm in room.proposed_team.all %}"{{ tm.user.username }}",{% endfor %}];
+                const proposed = [{% for tm in room.proposed_team.all %}"{{ tm.user.profile.name }}",{% endfor %}];
                 let pText = proposed.join(" and ");
                 if(proposed.length > 2) pText = proposed.slice(0, -1).join(", ") + " and " + proposed[proposed.length - 1];
-                document.getElementById('proposed-players-text').innerText = "{{ room.current_leader.user.username }} chose mission team: " + pText;
+                document.getElementById('proposed-players-text').innerText = "{{ room.current_leader.user.profile.name }} chose mission team: " + pText;
             </script>
 
             <form action="{% url 'cast_vote' room.room_code %}" method="POST" class="d-flex gap-2 m-0" onsubmit="handleVoteSubmit(event)">
@@ -102,7 +102,7 @@
             {% else %}
                 <p class="status-text text-muted m-0" id="questing-players-text"></p>
                 <script>
-                    const questers = [{% for tm in room.proposed_team.all %}"{{ tm.user.username }}",{% endfor %}];
+                    const questers = [{% for tm in room.proposed_team.all %}"{{ tm.user.profile.name }}",{% endfor %}];
                     let qText = questers.join(" and ");
                     if(questers.length > 2) qText = questers.slice(0, -1).join(", ") + " and " + questers[questers.length - 1];
                     document.getElementById('questing-players-text').innerText = qText + " are on the mission";
@@ -226,7 +226,7 @@
                             {% if p.is_good %} 
                             <div class="form-check border rounded px-4 py-2 bg-white">
                                 <input class="form-check-input target-checkbox" type="checkbox" name="assassin_targets" value="{{ p.id }}" id="target-{{ p.id }}">
-                                <label class="form-check-label fw-bold" for="target-{{ p.id }}">{{ p.user.username }}</label>
+                                <label class="form-check-label fw-bold" for="target-{{ p.id }}">{{ p.user.profile.name }}</label>
                             </div>
                             {% endif %}
                         {% endfor %}

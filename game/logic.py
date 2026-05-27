@@ -272,7 +272,8 @@ def get_top_players(limit=5):
             win_rate = wins / games_played
             
             top_players.append({
-                'username': u.profile.name,
+                'username': u.username,
+                'profilename': u.profile.name,
                 'games': games_played,
                 'win_rate_val': win_rate,
                 'win_rate_str': f"{int(win_rate * 100)}%"
