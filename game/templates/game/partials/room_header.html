@@ -73,6 +73,21 @@
     {% if lady_chain|length > 1 %}
         <div class="row mb-4">
             <div class="col-12">
+
+                <!-- Player's own private lady check, persistenly shown. -->
+                {% if player and player.lady_target %}
+                    <div class="border-bottom px-3 py-2 text-center d-flex align-items-center justify-content-center fw-semibold" style="background-color: #f0f7ff; color: #004085; font-size: 0.95rem;">
+                        <span class="me-2" style="font-size: 1.2rem;">🧜‍♀️</span>
+                        <span>Your Lady of the Lake Secret: <strong>{{ player.lady_target.user.profile.name }}</strong> is 
+                            {% if player.lady_target.is_good %}
+                                <span class="badge rounded-pill px-2 py-1 ms-1" style="background-color: #34c759; color: #fff; font-size: 0.75rem; letter-spacing: 0.5px;">GOOD 🔵</span>
+                            {% else %}
+                                <span class="badge rounded-pill px-2 py-1 ms-1" style="background-color: #ff3b30; color: #fff; font-size: 0.75rem; letter-spacing: 0.5px;">EVIL 🔴</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                {% endif %}                    
+
                 <div class="alert alert-info py-2 mb-0 text-center shadow-sm border-info border-opacity-50">
                     <strong class="text-info-emphasis">🧜‍♀️ Lady of the Lake Chain</strong><br>
                     <div class="mt-1">
