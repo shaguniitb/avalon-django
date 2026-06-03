@@ -44,6 +44,7 @@
         /* VOTING HISTORY TABLE */
         .history-table-wrapper { 
             overflow-x: auto; 
+            -webkit-overflow-scrolling: touch;
             max-width: 1000px; 
             margin: 0 auto; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
@@ -60,6 +61,38 @@
             text-align: center;
             vertical-align: middle;
         }
+
+        /* --- STICKY FIRST COLUMN CONFIGURATION --- */
+
+        /* 1. Lock the first cell of every row to the left edge */
+        .history-table th:first-child,
+        .history-table td:first-child {
+            position: sticky;
+            left: 0;
+            box-shadow: 2px 0 0 0 #dee2e6; /* Replaces collapsing native borders while scrolling */
+
+            /* Lock the width of the player names */
+            width: 140px; 
+            min-width: 140px;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;            
+
+        }
+
+        /* 2. Layer headers above rows, and give them a solid background */
+        .history-table thead tr th:first-child {
+            z-index: 4;
+            background-color: #f8f9fa !important; /* Matches Bootstrap .bg-light */
+        }
+
+        /* 3. Layer rows above the scrolling body, and give them a solid background */
+        .history-table tbody tr td:first-child {
+            z-index: 2;
+            background-color: #ffffff !important; /* Matches Bootstrap .bg-white */
+        }
+
 
         /* Thick, striking vertical separators for missions */
         .mission-divider {
