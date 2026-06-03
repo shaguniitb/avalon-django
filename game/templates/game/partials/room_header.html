@@ -112,25 +112,60 @@
                     </button>
                 </h2>
                 <div id="collapseSpoilers" class="accordion-collapse collapse" aria-labelledby="headingSpoilers" data-bs-parent="#accordionSpoilers">
-                    <div class="accordion-body bg-light p-0">
-                        <ul class="list-group list-group-flush">
-                            {% for username, role in spectator_spoilers.items %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span class="fw-semibold">{{ username }}</span>
-                                    
-                                    {% if role == 'Merlin' or role == 'Percival' or role == 'Lover' or role == 'Lovers' or role == 'Loyal Servant of Arthur' %}
-                                        <span class="badge bg-primary rounded-pill px-3 py-2">{{ role }}</span>
+                    <div class="accordion-body bg-light">
+                        
+                        <!-- NEW: Default Percival View -->
+                        {% if percival_spoilers %}
+                            <div class="mb-3 p-3 bg-white border rounded shadow-sm">
+                                <h6 class="fw-bold text-primary border-bottom pb-2 mb-2">
+                                    <i class="bi bi-eye-fill me-1"></i> Percival's Information
+                                </h6>
+                                <p class="mb-1"><strong>Percival:</strong> {{ percival_spoilers.percival_name }}</p>
+                                <p class="mb-0"><strong>Sees (Merlin/Morgana):</strong> 
+                                    {% if percival_spoilers.candidates %}
+                                        {{ percival_spoilers.candidates|join:" and " }}
                                     {% else %}
-                                        <span class="badge bg-danger rounded-pill px-3 py-2">{{ role }}</span>
+                                        <em>None in game</em>
                                     {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
+                                </p>
+                            </div>
+                        {% else %}
+                            <div class="mb-3 p-2 bg-white border rounded text-muted small">
+                                <em>Percival is not in this game.</em>
+                            </div>
+                        {% endif %}
+
+                        <!-- Nested Toggle for Full View -->
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-danger btn-sm fw-bold toggle-spoilers-btn collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#fullSpoilers" aria-expanded="false" aria-controls="fullSpoilers">
+                                <span class="show-text"><i class="bi bi-chevron-down me-1"></i> Reveal All Roles</span>
+                                <span class="hide-text"><i class="bi bi-chevron-up me-1"></i> Hide All Roles</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Original Full List (Hidden by default) -->
+                        <div class="collapse mt-3" id="fullSpoilers">
+                            <ul class="list-group list-group-flush border rounded">
+                                {% for username, role in spectator_spoilers.items %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span class="fw-semibold">{{ username }}</span>
+                                        
+                                        {% if role == 'Merlin' or role == 'Percival' or role == 'Lover' or role == 'Lovers' or role == 'Loyal Servant of Arthur' %}
+                                            <span class="badge bg-primary rounded-pill px-3 py-2">{{ role }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger rounded-pill px-3 py-2">{{ role }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
                     </div>
                 </div>
             </div>
         </div>
-    {% endif %}                
+    {% endif %}
 
     {% if spectators %}
         <div class="d-flex justify-content-center align-items-center flex-wrap gap-2 mt-4 mb-3">

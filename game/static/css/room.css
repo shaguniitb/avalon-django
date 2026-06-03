@@ -1,352 +1,375 @@
-        body { background-color: #ffffff; color: #212529; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+body { background-color: #ffffff; color: #212529; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
 
-        /* Ensure the seat can hold a positioned element */
-        .player-seat {
-            position: relative;
-        }
+/* Ensure the seat can hold a positioned element */
+.player-seat {
+    position: relative;
+}
 
-        /* Dims the avatar slightly when they have voted */
-        .player-seat.has-voted {
-            transition: opacity 0.3s ease;
-        }
+/* Dims the avatar slightly when they have voted */
+.player-seat.has-voted {
+    transition: opacity 0.3s ease;
+}
 
-        /* The Diagonal "VOTED" Stamp */
-        .player-seat.has-voted::after {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-20deg);
-            color: #ffffff;
-            font-weight: 900;
-            font-size: 1.1rem;
-            letter-spacing: 2px;
-            padding: 4px 12px;
-            border: 2px solid white;
-            border-radius: 6px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            pointer-events: none; /* Ensures the stamp doesn't block mouse clicks */
-            z-index: 10;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        }      
+/* The Diagonal "VOTED" Stamp */
+.player-seat.has-voted::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-20deg);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border: 2px solid white;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    pointer-events: none; /* Ensures the stamp doesn't block mouse clicks */
+    z-index: 10;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}      
 
-        /* 2. Text and color for TEAM VOTING (Everyone votes on the roster) */
-        body.phase-TEAM_VOTING .player-seat.has-voted::after {
-            content: 'VOTED'; 
-            background-color: #198754; /* Bootstrap success green */
-        }
+/* 2. Text and color for TEAM VOTING (Everyone votes on the roster) */
+body.phase-TEAM_VOTING .player-seat.has-voted::after {
+    content: 'VOTED'; 
+    background-color: #198754; /* Bootstrap success green */
+}
 
-        /* 3. Text and color for QUESTING (The team secretly chooses Success/Fail) */
-        body.phase-QUESTING .player-seat.has-voted::after {
-            content: 'SEALED'; 
-            background-color: #6c757d; /* Bootstrap secondary gray/slate for a secretive feel */
-        }        
+/* 3. Text and color for QUESTING (The team secretly chooses Success/Fail) */
+body.phase-QUESTING .player-seat.has-voted::after {
+    content: 'SEALED'; 
+    background-color: #6c757d; /* Bootstrap secondary gray/slate for a secretive feel */
+}        
 
-        /* VOTING HISTORY TABLE */
-        .history-table-wrapper { 
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch;
-            max-width: 1000px; 
-            margin: 0 auto; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
-            padding-bottom: 10px; 
-        }
-        
-        .history-table { 
-            width: max-content;
-            margin: 0 auto;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        }
+/* VOTING HISTORY TABLE */
+.history-table-wrapper { 
+    overflow-x: auto; 
+    -webkit-overflow-scrolling: touch;
+    max-width: 1000px; 
+    margin: 0 auto; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15); 
+    padding-bottom: 10px; 
+}
 
-        .history-table th, .history-table td {
-            text-align: center;
-            vertical-align: middle;
-        }
+.history-table { 
+    width: max-content;
+    margin: 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
 
-        /* --- STICKY FIRST COLUMN CONFIGURATION --- */
+.history-table th, .history-table td {
+    text-align: center;
+    vertical-align: middle;
+}
 
-        /* 1. Lock the first cell of every row to the left edge */
-        .history-table th:first-child,
-        .history-table td:first-child {
-            position: sticky;
-            left: 0;
-            box-shadow: 2px 0 0 0 #dee2e6; /* Replaces collapsing native borders while scrolling */
+/* --- STICKY FIRST COLUMN CONFIGURATION --- */
 
-            /* Lock the width of the player names */
-            width: 140px; 
-            min-width: 140px;
-            max-width: 140px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;            
+/* 1. Lock the first cell of every row to the left edge */
+.history-table th:first-child,
+.history-table td:first-child {
+    position: sticky;
+    left: 0;
+    box-shadow: 2px 0 0 0 #dee2e6; /* Replaces collapsing native borders while scrolling */
 
-        }
+    /* Lock the width of the player names */
+    width: 140px; 
+    min-width: 140px;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;            
 
-        /* 2. Layer headers above rows, and give them a solid background */
-        .history-table thead tr th:first-child {
-            z-index: 4;
-            background-color: #f8f9fa !important; /* Matches Bootstrap .bg-light */
-        }
+}
 
-        /* 3. Layer rows above the scrolling body, and give them a solid background */
-        .history-table tbody tr td:first-child {
-            z-index: 2;
-            background-color: #ffffff !important; /* Matches Bootstrap .bg-white */
-        }
+/* 2. Layer headers above rows, and give them a solid background */
+.history-table thead tr th:first-child {
+    z-index: 4;
+    background-color: #f8f9fa !important; /* Matches Bootstrap .bg-light */
+}
+
+/* 3. Layer rows above the scrolling body, and give them a solid background */
+.history-table tbody tr td:first-child {
+    z-index: 2;
+    background-color: #ffffff !important; /* Matches Bootstrap .bg-white */
+}
 
 
-        /* Thick, striking vertical separators for missions */
-        .mission-divider {
-            border-right: 5px solid #000000 !important; /* Pitch black and extra thick */
-        }
+/* Thick, striking vertical separators for missions */
+.mission-divider {
+    border-right: 5px solid #000000 !important; /* Pitch black and extra thick */
+}
 
-        /* VIBRANT Vote Background Colors (Lighter but still popping) */
-        .bg-vote-approve {
-            background-color: #34c759 !important; /* Bright, vibrant green */
-            border-color: #2da94c !important;
-        }
-        
-        .bg-vote-reject {
-            background-color: #ff3b30 !important; /* Bright, vibrant red */
-            border-color: #d63329 !important;
-        }
+/* VIBRANT Vote Background Colors (Lighter but still popping) */
+.bg-vote-approve {
+    background-color: #34c759 !important; /* Bright, vibrant green */
+    border-color: #2da94c !important;
+}
 
-        /* The Team Member Tick - Thicker and Prominent */
-        .team-tick {
-            font-size: 1.8rem; /* Made slightly larger */
-            font-weight: 900;
-            color: #ffffff; 
-            -webkit-text-stroke: 2px #ffffff; /* Artificially thickens the checkmark! */
-            text-shadow: 0px 3px 5px rgba(0,0,0,0.6); /* Drop shadow to keep it separated from the background */
-            line-height: 1;
-        }
+.bg-vote-reject {
+    background-color: #ff3b30 !important; /* Bright, vibrant red */
+    border-color: #d63329 !important;
+}
 
-        .team-shield {
-            font-size: 1.5rem; 
-            color: #0d6efd; /* Bold Royal Blue */
-            -webkit-text-stroke: 1px #084298; /* Darker blue outline */
-            text-shadow: 0px 3px 5px rgba(0,0,0,0.5); /* Deep drop shadow */
-            line-height: 1;
-        }        
+/* The Team Member Tick - Thicker and Prominent */
+.team-tick {
+    font-size: 1.8rem; /* Made slightly larger */
+    font-weight: 900;
+    color: #ffffff; 
+    -webkit-text-stroke: 2px #ffffff; /* Artificially thickens the checkmark! */
+    text-shadow: 0px 3px 5px rgba(0,0,0,0.6); /* Drop shadow to keep it separated from the background */
+    line-height: 1;
+}
 
-        /* High-Visibility Leader Crown */
-        .leader-crown {
-            font-size: 1.2rem; /* Make it just a tiny bit larger */
+.team-shield {
+    font-size: 1.5rem; 
+    color: #0d6efd; /* Bold Royal Blue */
+    -webkit-text-stroke: 1px #084298; /* Darker blue outline */
+    text-shadow: 0px 3px 5px rgba(0,0,0,0.5); /* Deep drop shadow */
+    line-height: 1;
+}        
+
+/* High-Visibility Leader Crown */
+.leader-crown {
+    font-size: 1.2rem; /* Make it just a tiny bit larger */
+    
+    /* Stacking hard shadows in all 4 directions creates a solid black outline */
+    text-shadow: 
+        -1px -1px 0 #000,  
+            1px -1px 0 #000,
+        -1px  1px 0 #000,
+            1px  1px 0 #000,
+            0px  4px 6px rgba(0,0,0,0.8); /* A heavy drop shadow for extra depth */
             
-            /* Stacking hard shadows in all 4 directions creates a solid black outline */
-            text-shadow: 
-                -1px -1px 0 #000,  
-                 1px -1px 0 #000,
-                -1px  1px 0 #000,
-                 1px  1px 0 #000,
-                 0px  4px 6px rgba(0,0,0,0.8); /* A heavy drop shadow for extra depth */
-                 
-            vertical-align: middle;
-        }
-        
-
-        .table-container { 
-            width: 100%; max-width: 850px; height: 500px; 
-            margin: 40px auto 60px auto; position: relative; 
-        }
-        
-        #center-info {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;
-        }
-
-        .mission-square {
-            width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.4rem; font-weight: bold; border-radius: 8px; transition: all 0.3s;
-        }
-
-        .mission-square.active-mission {
-            border-color: #ffc107 !important; border-width: 3px !important;
-            box-shadow: 0 0 15px rgba(255, 193, 7, 0.9); transform: scale(1.15); z-index: 5;
-        }
-
-        .player-seat { position: absolute; z-index: 10; transition: all 0.4s ease; }
-        
-        .player-avatar { 
-            position: relative; cursor: pointer; text-align: center;
-            padding: 10px 10px 0 10px; border-radius: 8px; transition: all 0.2s ease;
-            background-color: transparent;
-        }
-
-        /* --- NEW: DIMENSION-SAFE STYLE FOR LOGGED-IN PLAYER (DARK SLATE) --- */
-        .player-avatar.is-me {
-            border: 3px solid #343a40 !important; /* Deep Charcoal/Slate */
-            background-color: rgba(52, 58, 64, 0.05) !important; /* Very subtle grey tint */
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft, natural drop shadow instead of a neon glow */
-        }
-
-        /* Highlight the username box itself */
-        .username-text.is-me-name {
-            background-color: #343a40 !important; /* Deep Charcoal */
-            border: 1px solid #212529;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
-            color: #ffffff !important; /* Crisp white text */
-            font-weight: 600;
-        }
-        
-        body.phase-TEAM_BUILDING .player-seat.on-team .player-avatar,
-        body.phase-TEAM_PROPOSAL .player-seat.on-team .player-avatar,
-        body.phase-TEAM_VOTING .player-seat.on-team .player-avatar,
-        body.phase-QUESTING .player-seat.on-team .player-avatar {
-            background-color: #ffe066 !important; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        }
-
-        .toy-icon { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)); transition: all 0.2s ease; }
-        
-        body.phase-TEAM_BUILDING .player-seat.on-team .toy-icon,
-        body.phase-TEAM_PROPOSAL .player-seat.on-team .toy-icon,
-        body.phase-TEAM_VOTING .player-seat.on-team .toy-icon,
-        body.phase-QUESTING .player-seat.on-team .toy-icon { 
-            transform: scale(1.1); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); 
-        }
-        
-        .shield-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 2.2rem; z-index: 110; pointer-events: none; opacity: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
-        }
-        .on-team .shield-overlay { opacity: 1; }
-        
-        .crown-icon { position: absolute; top: -10px; left: -10px; transform: rotate(-35deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
-        
-        .hammer-icon { position: absolute; top: -10px; right: -10px; transform: rotate(15deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
-
-        /* NEW HEART ICON FOR LOVERS */
-        .heart-icon { 
-            position: absolute; top: 35px; right: -15px; 
-            font-size: 1.8rem; z-index: 65; 
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
-            animation: heartbeat 1.5s infinite;
-        }
-        @keyframes heartbeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.15); }
-            100% { transform: scale(1); }
-        }
-
-        .percival-vision::after { 
-            content: "?"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 3.5rem; font-weight: 900; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none;
-        }
-
-        .username-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -5px; }
-        .username-text { font-weight: 800; font-size: 1rem; color: #212529; background: rgba(255,255,255,0.9); padding: 0 6px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
-        .secret-role-text { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
-        
-        .status-strip {
-            width: 100%; max-width: 900px; margin: 0 auto 30px auto;
-            background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 12px;
-            padding: 15px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 15px;
-        }
-        .status-text { font-size: 1.15rem; font-weight: 600; color: #343a40; margin: 0; }
-        .text-reveal { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #6c757d; }
-        .text-danger.fw-bold {
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
-            letter-spacing: 0.5px;
-        }        
-
-        /* Quest Card Flip Animation */
-        .quest-card {
-            width: 100px;
-            height: 150px;
-            perspective: 1000px;
-            margin: 0 10px;
-        }
-        .quest-card-inner {
-            width: 100%;
-            height: 100%;
-            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
-            transform-style: preserve-3d;
-            position: relative;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            border-radius: 10px;
-        }
-        .quest-card.flipped .quest-card-inner {
-            transform: rotateY(180deg);
-        }
-        .quest-card-front, .quest-card-back {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            backface-visibility: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            font-weight: 900;
-            font-size: 1.2rem;
-            letter-spacing: 1px;
-        }
-        .quest-card-front {
-            background-color: #2b3035; /* Dark face-down color */
-            color: #ffffff;
-            border: 2px solid #495057;
-        }
-        .quest-card-back {
-            transform: rotateY(180deg);
-        }
-        .quest-card-back.success { background-color: #198754; color: white; border: 2px solid #146c43; }
-        .quest-card-back.fail { background-color: #dc3545; color: white; border: 2px solid #b02a37; }
+    vertical-align: middle;
+}
 
 
+.table-container { 
+    width: 100%; max-width: 850px; height: 500px; 
+    margin: 40px auto 60px auto; position: relative; 
+}
+
+#center-info {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;
+}
+
+.mission-square {
+    width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: bold; border-radius: 8px; transition: all 0.3s;
+}
+
+.mission-square.active-mission {
+    border-color: #ffc107 !important; border-width: 3px !important;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.9); transform: scale(1.15); z-index: 5;
+}
+
+.player-seat { position: absolute; z-index: 10; transition: all 0.4s ease; }
+
+.player-avatar { 
+    position: relative; cursor: pointer; text-align: center;
+    padding: 10px 10px 0 10px; border-radius: 8px; transition: all 0.2s ease;
+    background-color: transparent;
+}
+
+/* --- DIMENSION-SAFE STYLE FOR LOGGED-IN PLAYER (DARK SLATE) --- */
+.player-avatar.is-me {
+    border: 3px solid #343a40 !important; /* Deep Charcoal/Slate */
+    background-color: rgba(52, 58, 64, 0.05) !important; /* Very subtle grey tint */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft, natural drop shadow instead of a neon glow */
+}
+
+/* Highlight the username box itself */
+.username-text.is-me-name {
+    background-color: #343a40 !important; /* Deep Charcoal */
+    border: 1px solid #212529;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+    color: #ffffff !important; /* Crisp white text */
+    font-weight: 600;
+}
+
+body.phase-TEAM_BUILDING .player-seat.on-team .player-avatar,
+body.phase-TEAM_PROPOSAL .player-seat.on-team .player-avatar,
+body.phase-TEAM_VOTING .player-seat.on-team .player-avatar,
+body.phase-QUESTING .player-seat.on-team .player-avatar {
+    background-color: #ffe066 !important; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.toy-icon { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25)); transition: all 0.2s ease; }
+
+body.phase-TEAM_BUILDING .player-seat.on-team .toy-icon,
+body.phase-TEAM_PROPOSAL .player-seat.on-team .toy-icon,
+body.phase-TEAM_VOTING .player-seat.on-team .toy-icon,
+body.phase-QUESTING .player-seat.on-team .toy-icon { 
+    transform: scale(1.1); filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); 
+}
+
+.shield-overlay {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 2.2rem; z-index: 110; pointer-events: none; opacity: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+.on-team .shield-overlay { opacity: 1; }
+
+.crown-icon { position: absolute; top: -10px; left: -10px; transform: rotate(-35deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
+
+.hammer-icon { position: absolute; top: -10px; right: -10px; transform: rotate(15deg); font-size: 2rem; z-index: 60; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3)); }
+
+/* NEW HEART ICON FOR LOVERS */
+.heart-icon { 
+    position: absolute; top: 35px; right: -15px; 
+    font-size: 1.8rem; z-index: 65; 
+    filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
+    animation: heartbeat 1.5s infinite;
+}
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.percival-vision::after { 
+    content: "?"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 3.5rem; font-weight: 900; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none;
+}
+
+.username-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -5px; }
+.username-text { font-weight: 800; font-size: 1rem; color: #212529; background: rgba(255,255,255,0.9); padding: 0 6px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+.secret-role-text { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; }
+
+.status-strip {
+    width: 100%; max-width: 900px; margin: 0 auto 30px auto;
+    background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 12px;
+    padding: 15px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 15px;
+}
+.status-text { font-size: 1.15rem; font-weight: 600; color: #343a40; margin: 0; }
+.text-reveal { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-top: 2px; color: #6c757d; }
+.text-danger.fw-bold {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.5px;
+}        
+
+/* Quest Card Flip Animation */
+.quest-card {
+    width: 100px;
+    height: 150px;
+    perspective: 1000px;
+    margin: 0 10px;
+}
+.quest-card-inner {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: 10px;
+}
+.quest-card.flipped .quest-card-inner {
+    transform: rotateY(180deg);
+}
+.quest-card-front, .quest-card-back {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+.quest-card-front {
+    background-color: #2b3035; /* Dark face-down color */
+    color: #ffffff;
+    border: 2px solid #495057;
+}
+.quest-card-back {
+    transform: rotateY(180deg);
+}
+.quest-card-back.success { background-color: #198754; color: white; border: 2px solid #146c43; }
+.quest-card-back.fail { background-color: #dc3545; color: white; border: 2px solid #b02a37; }
+
+/* Hide the 'Hide' text by default when the panel is collapsed */
+.toggle-spoilers-btn.collapsed .hide-text {
+    display: none;
+}
+.toggle-spoilers-btn.collapsed .show-text {
+    display: inline;
+}
+
+/* When the panel is open (collapsed class is removed), swap the text */
+.toggle-spoilers-btn:not(.collapsed) .show-text {
+    display: none;
+}
+.toggle-spoilers-btn:not(.collapsed) .hide-text {
+    display: inline;
+}
+
+/* Optional: Invert the button colors so it looks "active" or pressed when open */
+.toggle-spoilers-btn:not(.collapsed) {
+    background-color: #dc3545; /* Bootstrap danger red */
+    color: white;
+}    
 
 
-        /* --- MOBILE OPTIMIZATIONS --- */
-    @media (max-width: 576px) {
-        /* If your avatar background/border has a fixed size, shrink it here */
-        .player-avatar {
-            width: 70px !important; 
-            height: 70px !important;
-        }
-        
-        /* Scale down your specific emoji class */
-        .toy-icon {
-            font-size: 3.5rem !important;
-        }
 
-        /* Scale down your specific shield overlay class */
-        .shield-overlay {
-            font-size: 1.5rem !important;
-        }
 
-        /* Scale down the Voted/Sealed diagonal stamp so it fits the smaller avatar */
-        .player-seat.has-voted::after {
-            font-size: 0.8rem !important;
-            padding: 2px 8px !important;
-            letter-spacing: 1px !important;
-        }
 
-        .table-container {
-            height: auto !important; /* Remove the hardcoded 500px */
-            aspect-ratio: 1 / 1; /* Make it a perfect square matching screen width */
-            margin: 20px auto !important; /* Tighter margins on mobile */
-        }        
+    /* --- MOBILE OPTIMIZATIONS --- */
+@media (max-width: 576px) {
+    /* If your avatar background/border has a fixed size, shrink it here */
+    .player-avatar {
+        width: 70px !important; 
+        height: 70px !important;
+    }
+    
+    /* Scale down your specific emoji class */
+    .toy-icon {
+        font-size: 3.5rem !important;
+    }
 
-        /* 1. Scale down the entire center dashboard so it doesn't overlap the avatars */
-        #center-info {
-            /* Retain the centering transform, but add a scale factor */
-            transform: translate(-50%, -50%) scale(0.75) !important;
-            /* Prevent the flexbox from forcefully wrapping the squares to a new line */
-            width: max-content; 
-        }
+    /* Scale down your specific shield overlay class */
+    .shield-overlay {
+        font-size: 1.5rem !important;
+    }
 
-        /* 2. Shrink the mission squares slightly */
-        .mission-square {
-            width: 35px !important;
-            height: 35px !important;
-            font-size: 1.1rem !important;
-        }
+    /* Scale down the Voted/Sealed diagonal stamp so it fits the smaller avatar */
+    .player-seat.has-voted::after {
+        font-size: 0.8rem !important;
+        padding: 2px 8px !important;
+        letter-spacing: 1px !important;
+    }
 
-        /* 3. Reduce the Bootstrap gap spacing between the squares */
-        #center-info .gap-3 {
-            gap: 0.5rem !important;
-        }        
-
-        
+    .table-container {
+        height: auto !important; /* Remove the hardcoded 500px */
+        aspect-ratio: 1 / 1; /* Make it a perfect square matching screen width */
+        margin: 20px auto !important; /* Tighter margins on mobile */
     }        
+
+    /* 1. Scale down the entire center dashboard so it doesn't overlap the avatars */
+    #center-info {
+        /* Retain the centering transform, but add a scale factor */
+        transform: translate(-50%, -50%) scale(0.75) !important;
+        /* Prevent the flexbox from forcefully wrapping the squares to a new line */
+        width: max-content; 
+    }
+
+    /* 2. Shrink the mission squares slightly */
+    .mission-square {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* 3. Reduce the Bootstrap gap spacing between the squares */
+    #center-info .gap-3 {
+        gap: 0.5rem !important;
+    }        
+
+    
+}        

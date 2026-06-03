@@ -286,6 +286,7 @@ def game_room(request, room_code):
     all_spectators = Spectator.objects.filter(game=room)
 
     spectator_spoilers = None
+    percival_spoilers = None
 
     # Only generate spoilers IF they are a spectator, the host allowed it, and the game has started
     if is_spectator and room.allow_spectator_spoilers and room.current_phase != 'LOBBY':
@@ -293,6 +294,20 @@ def game_room(request, room_code):
         spectator_spoilers = {
             p.user.profile.name: p.role for p in all_players
         }    
+
+        # Generate Percival-specific knowledge ---
+        percival_player = next((p for p in all_players if p.role == 'Percival'), None)
+        if percival_player:
+            candidates = [p.user.profile.name for p in all_players if p.role in ['Merlin', 'Morgana']]
+            # Shuffle so Merlin isn't always listed first in the array
+            random.shuffle(candidates) 
+            
+            percival_spoilers = {
+                'percival_name': percival_player.user.profile.name,
+                'candidates': candidates
+            }
+
+
 
     is_lady_turn = False
     past_lady_ids = []
@@ -328,6 +343,7 @@ def game_room(request, room_code):
         'player_history': player_history,
         'is_spectator': is_spectator,
         'spectator_spoilers': spectator_spoilers,
+        'percival_spoilers': percival_spoilers,
         'is_lady_turn': is_lady_turn,
         'past_lady_ids': past_lady_ids,
         'lady_chain': lady_chain,
