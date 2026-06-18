@@ -11,7 +11,7 @@ from django.db.models import Count
 from django.db import models
 from django.utils import timezone
 from .models import GameRoom, Player, Spectator, UserProfile
-from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room, get_top_players
+from .logic import start_game_and_assign_roles, get_player_knowledge, tally_team_votes, tally_quest_votes, attempt_assassination, MISSION_RULES, get_required_team_size, transition_to_new_room, get_top_players, get_grudge_stats
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -130,6 +130,7 @@ def home(request):
             return redirect('game_room', room_code=room_code)        
         
     top_5_players = get_top_players(limit=3)
+    grudge_stats = get_grudge_stats()
     
     # Fetch all rooms that are currently waiting for players (LOBBY phase)
     available_lobbies = GameRoom.objects.filter(
@@ -162,6 +163,7 @@ def home(request):
         'active_games': active_games,
         'active_game': active_game, # Pass the active game to the template
         'top_5_players': top_5_players,
+        'grudge_stats': grudge_stats,
     })
 
 

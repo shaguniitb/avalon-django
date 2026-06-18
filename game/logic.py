@@ -238,6 +238,59 @@ def transition_to_new_room(old_room):
     
     return new_code
 
+def get_grudge_stats():
+    """
+    Calculates specific entertaining stats based on completed game histories.
+    """
+
+    MIN_GAMES = 3
+
+    # Grab all users who have participated in a completed game
+    users_with_games = User.objects.filter(
+        player__game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+    ).exclude(
+        profile__is_test_account = True # Filters test accounts
+    ).distinct()
+    
+    # Dictionaries to track the current leaders for our fun stats
+    top_betrayer = {'username': None, 'profilename': None, 'score': 0}
+    worst_detective = {'username': None, 'profilename': None, 'score': 0}
+    best_merlin = {'username': None, 'profilename': None, 'score': 0}
+    
+    for u in users_with_games:
+        # Fetch all completed game records for this specific user
+        completed_players = Player.objects.filter(
+            user=u, 
+            game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+        ).select_related('game')
+        
+        # 1. Evil Wins: Voted as Evil, and the game ended in EVIL_WINS
+        evil_wins = sum(1 for p in completed_players if not p.is_good and p.game.current_phase == 'EVIL_WINS')
+        
+        # 2. Good Losses: Played as Good, but the game ended in EVIL_WINS
+        good_losses = sum(1 for p in completed_players if p.is_good and p.game.current_phase == 'EVIL_WINS')
+        
+        # 3. Merlin Wins: Specifically played as Merlin and won
+        merlin_wins = sum(1 for p in completed_players if p.role == 'Merlin' and p.game.current_phase == 'GOOD_WINS')
+        
+        # Update our stat leaders if this user beats the current high score
+        if evil_wins > top_betrayer['score']:
+            top_betrayer = {'username': u.username, 'profilename': u.profile.display_name, 'score': evil_wins}
+            
+        if good_losses > worst_detective['score']:
+            worst_detective = {'username': u.username, 'profilename': u.profile.display_name, 'score': good_losses}
+            
+        if merlin_wins > best_merlin['score']:
+            best_merlin = {'username': u.username, 'profilename': u.profile.display_name, 'score': merlin_wins}
+            
+    # Return None if no one has triggered the stat yet
+    return {
+        'top_betrayer': top_betrayer if top_betrayer['score'] > 0 else None,
+        'worst_detective': worst_detective if worst_detective['score'] > 0 else None,
+        'best_merlin': best_merlin if best_merlin['score'] > 0 else None,
+    }
+
+
 def get_top_players(limit=5):
     """
     Calculates the win rates for all players across completed games
@@ -268,19 +321,23 @@ def get_top_players(limit=5):
                 if (p.is_good and p.game.current_phase == 'GOOD_WINS') or 
                    (not p.is_good and p.game.current_phase == 'EVIL_WINS')
             )
-            
+            losses = games_played - wins
+            net_score = wins - losses
             win_rate = wins / games_played
             
             top_players.append({
                 'username': u.username,
                 'profilename': u.profile.name,
                 'games': games_played,
-                'win_rate_val': win_rate,
+                'wins': wins,
+                'losses': losses,
+                'net_score': net_score,
+                # 'win_rate_val': win_rate,
                 'win_rate_str': f"{int(win_rate * 100)}%"
             })
             
     # Sort by win rate (descending), then by games played (descending) as a tie-breaker
-    top_players.sort(key=lambda x: (x['win_rate_val'], x['games']), reverse=True)
+    top_players.sort(key=lambda x: (x['net_score'], x['games']), reverse=True)
     
     # Return only the requested number of top players
     return top_players[:limit]
