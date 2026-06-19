@@ -5,9 +5,43 @@
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/room.css' %}">
+    <style>
+        /* Setup the base transition for a smooth, cinematic phase-shift fade */
+        body {
+            transition: background 1.5s ease-in-out, background-color 1.5s ease-in-out;
+            background-attachment: fixed;
+            background-color: #f8f9fa;
+        }
+
+        /* Using highly desaturated, luminous pastels keeps the UI clean, 
+           ensures dark text remains perfectly legible, and builds a subtle mood.
+        */
+        body.team-good {
+            background: linear-gradient(135deg, #edf4fa 0%, #d4e6f4 50%, #b9d7ea 100%) fixed;
+        }
+
+        body.team-evil {
+            background: linear-gradient(135deg, #fbf3f3 0%, #f5d6d6 50%, #eba7a7 100%) fixed;
+        }
+
+        /* Optional: Subtle ambient tint adjustments to structural elements if needed */
+        body.team-good .card, body.team-good .status-strip {
+            border-color: rgba(13, 110, 253, 0.08) !important;
+            box-shadow: 0 4px 20px rgba(13, 110, 253, 0.03);
+        }
+
+        body.team-evil .card, body.team-evil .status-strip {
+            border-color: rgba(220, 53, 69, 0.08) !important;
+            box-shadow: 0 4px 20px rgba(220, 53, 69, 0.03);
+        }
+    </style>
 {% endblock %}
 
-{% block body_class %}py-4 phase-{{ room.current_phase }}{% endblock %}
+
+
+{% block body_class %}py-4 phase-{{ room.current_phase }}
+    {% if room.current_phase != 'LOBBY' and not is_spectator and player %}{% if player.is_good %} team-good{% else %} team-evil{% endif %}{% endif %}
+{% endblock %}
 
 {% block content %}
 
