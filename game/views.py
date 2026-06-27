@@ -956,3 +956,30 @@ def player_statistics(request, username):
     }
     return render(request, 'game/stats.html', context)
 
+# Add this near your other views in views.py
+
+def leaderboard(request):
+    """
+    Renders a dedicated page showing the full leaderboard of all players.
+    """
+    # Passing limit=None returns the entire list because Python slicing [:None] 
+    # goes to the end of the list.
+    all_players = get_top_players(limit=None) 
+
+    sort_by = request.GET.get('sort', 'net_score')
+
+    # get_top_players already sorts by net_score by default, so we only 
+    # need to re-sort if the user requested a different metric.
+    if sort_by == 'games':
+        all_players.sort(key=lambda x: x['games'], reverse=True)
+    elif sort_by == 'win_rate':
+        # Calculate the raw win rate on the fly for accurate sorting
+        all_players.sort(key=lambda x: x['wins'] / x['games'], reverse=True)
+    else:
+        # Fallback to net_score to ensure sort_by is consistent
+        sort_by = 'net_score'    
+    
+    return render(request, 'game/leaderboard.html', {
+        'all_players': all_players,
+        'current_sort': sort_by,
+    })

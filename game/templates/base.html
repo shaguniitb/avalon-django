@@ -33,6 +33,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'profile' %}">My Profile</a>
                     </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{% url 'leaderboard' %}">
+                            <i class="bi bi-trophy-fill"></i> Leaderboard
+                        </a>
+                    </li>                    
                     
                     {% if request.resolver_match.url_name != 'player_statistics' %}
                     <li class="nav-item">
