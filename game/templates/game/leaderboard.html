@@ -19,7 +19,6 @@
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-striped table-hover mb-0 text-center align-middle">
-
                         <thead class="table-light">
                             <tr>
                                 <th>Rank</th>
@@ -90,5 +89,127 @@
             </div>
         </div>
     </div>
+
+    <hr class="my-5">
+
+    <div class="row mb-5 mt-5">
+        <div class="col-12 text-center mb-4">
+            <h2 class="h3 text-dark fw-bold"><i class="bi bi-trophy-fill text-warning me-2"></i>Entertaining Grudge Stats</h2>
+            <p class="text-muted">The top 5 players across legendary social deduction accomplishments.</p>
+        </div>
+
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-danger text-white text-center py-2">
+                    <h5 class="mb-0"><i class="bi bi-incognito me-2"></i>Top Betrayers</h5>
+                    <small>Most Wins as Evil</small>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Evil Wins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in grudge_stats.top_betrayers %}
+                            <tr>
+                                <td class="text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">
+                                    <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                        {{ player.profilename }}
+                                    </a>
+                                </td>
+                                <td class="text-danger fw-bold">{{ player.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted py-4">No betrayals recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-warning text-dark text-center py-2">
+                    <h5 class="mb-0"><i class="bi bi-search me-2"></i>Worst Detectives</h5>
+                    <small>Most Losses as Good</small>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Good Losses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in grudge_stats.worst_detectives %}
+                            <tr>
+                                <td class="text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">
+                                    <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                        {{ player.profilename }}
+                                    </a>
+                                </td>
+                                <td class="fw-bold" style="color: #b55d00;">{{ player.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted py-4">No blindspots recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-info text-dark text-center py-2">
+                    <h5 class="mb-0"><i class="bi bi-eye-fill me-2"></i>Best Merlins</h5>
+                    <small>Most Wins as Merlin</small>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Merlin Wins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in grudge_stats.best_merlins %}
+                            <tr>
+                                <td class="text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">
+                                    <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                        {{ player.profilename }}
+                                    </a>
+                                </td>
+                                <td class="text-info fw-bold">{{ player.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted py-4">No successful visions yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 </div>
 {% endblock %}

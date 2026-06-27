@@ -241,6 +241,8 @@ def transition_to_new_room(old_room):
 def get_grudge_stats():
     """
     Calculates specific entertaining stats based on completed game histories.
+    Returns both the single top leaders (for backwards compatibility) and 
+    the top 5 lists for the leaderboard.
     """
 
     MIN_GAMES = 3
@@ -251,11 +253,15 @@ def get_grudge_stats():
     ).exclude(
         profile__is_test_account = True # Filters test accounts
     ).distinct()
+
+    all_betrayers = []
+    all_detectives = []
+    all_merlins = []    
     
-    # Dictionaries to track the current leaders for our fun stats
-    top_betrayer = {'username': None, 'profilename': None, 'score': 0}
-    worst_detective = {'username': None, 'profilename': None, 'score': 0}
-    best_merlin = {'username': None, 'profilename': None, 'score': 0}
+    # # Dictionaries to track the current leaders for our fun stats
+    # top_betrayer = {'username': None, 'profilename': None, 'score': 0}
+    # worst_detective = {'username': None, 'profilename': None, 'score': 0}
+    # best_merlin = {'username': None, 'profilename': None, 'score': 0}
     
     for u in users_with_games:
         # Fetch all completed game records for this specific user
@@ -273,21 +279,31 @@ def get_grudge_stats():
         # 3. Merlin Wins: Specifically played as Merlin and won
         merlin_wins = sum(1 for p in completed_players if p.role == 'Merlin' and p.game.current_phase == 'GOOD_WINS')
         
-        # Update our stat leaders if this user beats the current high score
-        if evil_wins > top_betrayer['score']:
-            top_betrayer = {'username': u.username, 'profilename': u.profile.display_name, 'score': evil_wins}
+        # Append data if they have a score above 0
+        if evil_wins > 0:
+            all_betrayers.append({'username': u.username, 'profilename': u.profile.name, 'score': evil_wins})
             
-        if good_losses > worst_detective['score']:
-            worst_detective = {'username': u.username, 'profilename': u.profile.display_name, 'score': good_losses}
+        if good_losses > 0:
+            all_detectives.append({'username': u.username, 'profilename': u.profile.name, 'score': good_losses})
             
-        if merlin_wins > best_merlin['score']:
-            best_merlin = {'username': u.username, 'profilename': u.profile.display_name, 'score': merlin_wins}
-            
-    # Return None if no one has triggered the stat yet
+        if merlin_wins > 0:
+            all_merlins.append({'username': u.username, 'profilename': u.profile.name, 'score': merlin_wins})
+
+    # Sort lists by score descending
+    all_betrayers.sort(key=lambda x: x['score'], reverse=True)
+    all_detectives.sort(key=lambda x: x['score'], reverse=True)
+    all_merlins.sort(key=lambda x: x['score'], reverse=True)
+
     return {
-        'top_betrayer': top_betrayer if top_betrayer['score'] > 0 else None,
-        'worst_detective': worst_detective if worst_detective['score'] > 0 else None,
-        'best_merlin': best_merlin if best_merlin['score'] > 0 else None,
+        # Single leaders (Backwards compatibility for home dashboard)
+        'top_betrayer': all_betrayers[0] if all_betrayers else None,
+        'worst_detective': all_detectives[0] if all_detectives else None,
+        'best_merlin': all_merlins[0] if all_merlins else None,
+        
+        # Top 5 Lists for the Leaderboard tables
+        'top_betrayers': all_betrayers[:5],
+        'worst_detectives': all_detectives[:5],
+        'best_merlins': all_merlins[:5],
     }
 
 

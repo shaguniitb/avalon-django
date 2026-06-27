@@ -978,8 +978,11 @@ def leaderboard(request):
     else:
         # Fallback to net_score to ensure sort_by is consistent
         sort_by = 'net_score'    
+
+    grudge_stats = get_grudge_stats()        
     
     return render(request, 'game/leaderboard.html', {
         'all_players': all_players,
         'current_sort': sort_by,
+        'grudge_stats': grudge_stats,
     })
