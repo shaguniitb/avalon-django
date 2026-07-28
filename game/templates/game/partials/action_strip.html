@@ -1,4 +1,8 @@
 <div class="status-strip" id="main-action-strip">
+
+    {% if is_spectator and room.current_phase != 'QUEST_REVEAL' %}
+        <p class="status-text text-muted mb-0">You are spectating this game.</p>
+    {% else %}    
     
     {% if room.current_phase == 'TEAM_BUILDING' or room.current_phase == 'TEAM_PROPOSAL' %}
         {% if is_lady_turn %}
@@ -347,5 +351,7 @@
         </div>
     {% else %}
         <p class="status-text">Waiting for game to advance...</p>
+    {% endif %}
+
     {% endif %}
 </div>

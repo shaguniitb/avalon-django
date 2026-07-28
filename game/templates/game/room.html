@@ -58,15 +58,9 @@
             {% include 'game/partials/lobby_role_selection.html' %}
 
         {% else %}
-            {% if not is_spectator %}
-                {% include 'game/partials/action_strip.html' %}
-            {% else %}
-                <div class="status-strip">
-                    <p class="status-text">
-                        You are spectating this game.
-                    </p>
-                </div>
-            {% endif %}            
+
+            {% include 'game/partials/action_strip.html' %}
+
         {% endif %}
 
     </div>

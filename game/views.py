@@ -828,7 +828,6 @@ def advance_reveal(request, room_code):
     if request.user != game_room.current_leader.user:
         return redirect('game_room', room_code=room_code)
 
-    # --- THIS IS YOUR EXACT LOGIC MOVED FROM TALLY_QUEST_VOTES ---
     if game_room.score_good >= 3:
         has_assassin = game_room.players.filter(role='Assassin').exists()
         if has_assassin:
