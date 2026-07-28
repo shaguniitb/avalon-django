@@ -1,7 +1,7 @@
 <div class="status-strip" id="main-action-strip">
 
     {% if is_spectator and room.current_phase != 'QUEST_REVEAL' %}
-        <p class="status-text text-muted mb-0">You are spectating this game.</p>
+        <p class="status-text text-muted mb-0">You are spectating. Feel free to judge their awful decisions in silence.</p>
     {% else %}    
     
     {% if room.current_phase == 'TEAM_BUILDING' or room.current_phase == 'TEAM_PROPOSAL' %}
@@ -137,17 +137,38 @@
         </div>
 
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
+            (function initQuestReveal() {
                 const failsCount = {{ room.missions.last.fails_count|default:0 }};
                 const teamSize = {{ room.missions.last.team_size|default:0 }};
                 const successCount = teamSize - failsCount;
 
+                // --- AUDIO URLS ---
+                const flipSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'; // Card flip swish
+                const successSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'; // Victory chime / fanfare
+                const cheerSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3'; // Crowd cheering
+                
+                // Fail Combo: Gasp + Sad Trombone
+                const gaspSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2805/2805-preview.mp3';
+                const longFailSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/731/731-preview.mp3';
+
+                // Helper function to safely spawn and play audio
+                function playSound(url, volume = 0.5) {
+                    try {
+                        const audio = new Audio(url);
+                        audio.volume = volume;
+                        audio.play().catch(e => console.warn('Autoplay caught:', e));
+                    } catch (err) {
+                        console.error('Audio initialization error:', err);
+                    }
+                }
+
                 // 1. Build tension array: Successes ALWAYS first, Fails ALWAYS last
                 const results = [];
-                for(let i=0; i<successCount; i++) results.push('SUCCESS');
-                for(let i=0; i<failsCount; i++) results.push('FAIL');
+                for(let i = 0; i < successCount; i++) results.push('SUCCESS');
+                for(let i = 0; i < failsCount; i++) results.push('FAIL');
 
                 const container = document.getElementById("quest-reveal-container");
+                if (!container) return;
 
                 // 2. Render all cards face-down
                 results.forEach(vote => {
@@ -166,28 +187,49 @@
                 });
 
                 // 3. Stagger the flips (1.5 seconds apart)
-                const cards = document.querySelectorAll('.quest-card');
-                let initialDelay = 1000; // Wait 1s before the first card flips
+                const cards = container.querySelectorAll('.quest-card');
+                let initialDelay = 1000;
                 let delayBetweenFlips = 1500;
 
                 cards.forEach((card, index) => {
                     setTimeout(() => {
                         card.classList.add('flipped');
+
+                        const isLastCard = (index === cards.length - 1);
+
+                        if (isLastCard) {
+                            if (failsCount > 0) {
+                                // DRAMATIC FAIL COMBO (Gasp -> Sad Trombone)
+                                playSound(gaspSfxUrl, 0.7);
+                                setTimeout(() => {
+                                    playSound(longFailSfxUrl, 0.8);
+                                }, 400);
+
+                            } else {
+                                // VICTORIOUS SUCCESS COMBO (Fanfare -> Crowd Cheer)
+                                playSound(successSfxUrl, 0.6);
+                                setTimeout(() => {
+                                    playSound(cheerSfxUrl, 0.5);
+                                }, 300);
+                            }
+                        } else {
+                            // Card flip sound for early cards
+                            playSound(flipSfxUrl, 0.3);
+                        }
+
                     }, initialDelay + (index * delayBetweenFlips));
                 });
 
-                // 4. Reveal the Continue button gracefully at the very end
-
+                // 4. Reveal the countdown timer
+                const extraSoundPadding = (failsCount > 0) ? 2500 : 1800;
 
                 setTimeout(() => {
-                    // Fade in the text
                     const msgDiv = document.getElementById('auto-advance-msg');
                     if (msgDiv) {
                         msgDiv.style.display = 'block';
                         setTimeout(() => msgDiv.style.opacity = '1', 50); 
                     }
 
-                    // Start the 5-second countdown
                     let timeLeft = 3;
                     const countdownEl = document.getElementById('reveal-countdown');
                     const formEl = document.getElementById('auto-continue-form');
@@ -200,15 +242,14 @@
                         
                         if (timeLeft <= 0) {
                             clearInterval(timer);
-                            // If this player is the leader, submit the form!
                             if (formEl) {
                                 formEl.submit();
                             }
                         }
                     }, 1000);
 
-                }, initialDelay + (cards.length * delayBetweenFlips) + 800);                
-            });
+                }, initialDelay + (cards.length * delayBetweenFlips) + extraSoundPadding);
+            })();
         </script>
         
     
