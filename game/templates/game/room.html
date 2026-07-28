@@ -58,9 +58,15 @@
             {% include 'game/partials/lobby_role_selection.html' %}
 
         {% else %}
-
-            {% include 'game/partials/action_strip.html' %}
-
+            {% if not is_spectator %}
+                {% include 'game/partials/action_strip.html' %}
+            {% else %}
+                <div class="status-strip">
+                    <p class="status-text">
+                        You are spectating this game.
+                    </p>
+                </div>
+            {% endif %}            
         {% endif %}
 
     </div>
@@ -227,45 +233,67 @@
 
     window.addEventListener('resize', positionPlayers);
 
-    function celebrate() {
-        const phase = "{{ room.current_phase }}";
-        
-        // Only run if the game just reached a win state
-        if (phase === 'GOOD_WINS' || phase === 'EVIL_WINS') {
-            // Check if we've already celebrated this win in this session
-            if (sessionStorage.getItem('celebrated_{{ room.room_code }}') !== 'true') {
-                
-                const duration = 5 * 1000;
-                const animationEnd = Date.now() + duration;
-                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+function celebrate() {
+    const phase = "{{ room.current_phase }}";
+    
+    if (phase === 'GOOD_WINS' || phase === 'EVIL_WINS') {
+        const sessionKey = 'celebrated_{{ room.room_code }}';
 
-                // Colors: Blue/Silver for Good, Red/Gold for Evil
-                const colors = (phase === 'GOOD_WINS') ? ['#0d6efd', '#ffffff'] : ['#dc3545', '#ffc107'];
+        if (sessionStorage.getItem(sessionKey) !== 'true') {
+            
+            // --- AUDIO SELECTION ---
+            // Good Win: Epic Triumphant Fanfare (External URL)
+            const goodSfxUrl = "{% static 'sounds/victory_sound.mp3' %}";
+            
+            // Evil Win: Local Static File
+            // Ensure you have {% load static %} at the top of your HTML file!
+            const evilSfxUrl = "{% static 'sounds/freesound_community-evil-laugh-89423.mp3' %}";
 
-                const interval = setInterval(function() {
-                    const timeLeft = animationEnd - Date.now();
+            const audioUrl = (phase === 'GOOD_WINS') ? goodSfxUrl : evilSfxUrl;
+            const winAudio = new Audio(audioUrl);
+            winAudio.volume = (phase === 'GOOD_WINS') ? 0.7 : 0.85;
 
-                    if (timeLeft <= 0) {
-                        return clearInterval(interval);
-                    }
+            // Trigger sound with browser autoplay fallback handling
+            const triggerWinAudio = () => {
+                winAudio.play().then(() => {
+                    sessionStorage.setItem(sessionKey, 'true');
+                }).catch(e => {
+                    console.warn('Autoplay blocked audio, setting interaction listener:', e);
+                    const playOnInteraction = () => {
+                        winAudio.play();
+                        sessionStorage.setItem(sessionKey, 'true');
+                        document.removeEventListener('click', playOnInteraction);
+                        document.removeEventListener('touchstart', playOnInteraction);
+                    };
+                    document.addEventListener('click', playOnInteraction, { once: true });
+                    document.addEventListener('touchstart', playOnInteraction, { once: true });
+                });
+            };
 
-                    const particleCount = 50 * (timeLeft / duration);
-                    // since particles fall down, start a bit higher than random
-                    confetti(Object.assign({}, defaults, { 
-                        particleCount, 
-                        origin: { x: Math.random(), y: Math.random() - 0.2 },
-                        colors: colors
-                    }));
-                }, 250);
+            triggerWinAudio();
 
-                // Mark as celebrated so it doesn't fire every 5-second reload
-                sessionStorage.setItem('celebrated_{{ room.room_code }}', 'true');
-            }
-        } else {
-            // Reset if the game moves back to Lobby or elsewhere
-            sessionStorage.removeItem('celebrated_{{ room.room_code }}');
+            // --- CONFETTI ANIMATION ---
+            const duration = 4 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+            const colors = (phase === 'GOOD_WINS') ? ['#0d6efd', '#ffffff'] : ['#dc3545', '#ffc107'];
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+
+                const particleCount = 40 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: Math.random(), y: Math.random() - 0.2 },
+                    colors: colors
+                }));
+            }, 250);
         }
+    } else {
+        sessionStorage.removeItem('celebrated_{{ room.room_code }}');
     }
+}
 
     // Run on load
     window.addEventListener('load', celebrate);

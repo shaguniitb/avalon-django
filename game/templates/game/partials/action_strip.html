@@ -1,3 +1,4 @@
+{% load static %} 
 <div class="status-strip" id="main-action-strip">
 
     {% if is_spectator and room.current_phase != 'QUEST_REVEAL' %}
@@ -144,19 +145,24 @@
 
                 // --- AUDIO URLS ---
                 const flipSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3'; // Card flip swish
-                const successSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'; // Victory chime / fanfare
-                const cheerSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3'; // Crowd cheering
-                
-                // Fail Combo: Gasp + Sad Trombone
-                const gaspSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2805/2805-preview.mp3';
-                const longFailSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/731/731-preview.mp3';
+                const successSfxUrl = 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'; // Quick chime                
+                const failSfxUrl = "{% static 'sounds/Mission_fail.mp3' %}";
 
-                // Helper function to safely spawn and play audio
-                function playSound(url, volume = 0.5) {
+                // Helper function with duration cut-off support
+                function playSound(url, volume = 0.5, maxDurationMs = null) {
                     try {
                         const audio = new Audio(url);
                         audio.volume = volume;
                         audio.play().catch(e => console.warn('Autoplay caught:', e));
+
+                        // Cut sound off early if maxDurationMs is set
+                        if (maxDurationMs) {
+                            setTimeout(() => {
+                                audio.pause();
+                                audio.currentTime = 0;
+                            }, maxDurationMs);
+                        }
+                        return audio;
                     } catch (err) {
                         console.error('Audio initialization error:', err);
                     }
@@ -199,18 +205,11 @@
 
                         if (isLastCard) {
                             if (failsCount > 0) {
-                                // DRAMATIC FAIL COMBO (Gasp -> Sad Trombone)
-                                playSound(gaspSfxUrl, 0.7);
-                                setTimeout(() => {
-                                    playSound(longFailSfxUrl, 0.8);
-                                }, 400);
-
+                                // DRAMATIC FAIL COMBO (Gasp -> Sad Trombone stopped at 1.5s / 1500ms)
+                                playSound(failSfxUrl, 0.85);
                             } else {
-                                // VICTORIOUS SUCCESS COMBO (Fanfare -> Crowd Cheer)
+                                // QUICK & CRISP SUCCESS CHIME
                                 playSound(successSfxUrl, 0.6);
-                                setTimeout(() => {
-                                    playSound(cheerSfxUrl, 0.5);
-                                }, 300);
                             }
                         } else {
                             // Card flip sound for early cards
@@ -221,7 +220,7 @@
                 });
 
                 // 4. Reveal the countdown timer
-                const extraSoundPadding = (failsCount > 0) ? 2500 : 1800;
+                const extraSoundPadding = (failsCount > 0) ? 1600 : 800;
 
                 setTimeout(() => {
                     const msgDiv = document.getElementById('auto-advance-msg');
