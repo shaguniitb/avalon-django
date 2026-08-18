@@ -135,6 +135,7 @@
             </div>
         </div>
 
+        <!-- Worst Detectives -->
         <div class="col-12 col-lg-4 mb-4">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-warning text-dark text-center py-2">
@@ -172,6 +173,8 @@
             </div>
         </div>
 
+
+        <!-- Best Merlins -->
         <div class="col-12 col-lg-4 mb-4">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-info text-dark text-center py-2">
@@ -208,8 +211,121 @@
                 </div>
             </div>
         </div>
+
+        <!-- Best Percivals -->
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-primary text-white text-center py-2">
+                    <h5 class="mb-0"><i class="bi bi-shield-fill me-2"></i>Best Percivals</h5>
+                    <small>Most Wins as Percival</small>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Percival Wins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in grudge_stats.best_percivals %}
+                            <tr>
+                                <td class="text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">
+                                    <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                        {{ player.profilename }}
+                                    </a>
+                                </td>
+                                <td class="text-primary fw-bold">{{ player.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted py-4">No Percival victories recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Best Morganas -->
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-danger text-white text-center py-2">
+                    <h5 class="mb-0"><i class="bi bi-person-badge-fill me-2"></i>Best Morganas</h5>
+                    <small>Most Wins as Morgana</small>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Morgana Wins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in grudge_stats.best_morganas %}
+                            <tr>
+                                <td class="text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">
+                                    <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                        {{ player.profilename }}
+                                    </a>
+                                </td>
+                                <td class="text-danger fw-bold">{{ player.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted py-4">No Morgana victories recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Best Mordreds -->
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white text-center py-2">
+                    <h5 class="mb-0"><i class="bi bi-eye-slash-fill me-2"></i>Best Mordreds</h5>
+                    <small>Most Wins as Mordred</small>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Mordred Wins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for player in grudge_stats.best_mordreds %}
+                            <tr>
+                                <td class="text-muted fw-bold">#{{ forloop.counter }}</td>
+                                <td class="fw-bold">
+                                    <a href="{% url 'player_statistics' player.username %}" class="text-decoration-none">
+                                        {{ player.profilename }}
+                                    </a>
+                                </td>
+                                <td class="text-danger fw-bold">{{ player.score }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-muted py-4">No Mordred victories recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
-
-
 </div>
 {% endblock %}

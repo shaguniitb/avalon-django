@@ -257,6 +257,9 @@ def get_grudge_stats():
     all_betrayers = []
     all_detectives = []
     all_merlins = []    
+    all_percivals = []
+    all_morganas = []
+    all_mordreds = []    
     
     # # Dictionaries to track the current leaders for our fun stats
     # top_betrayer = {'username': None, 'profilename': None, 'score': 0}
@@ -278,6 +281,16 @@ def get_grudge_stats():
         
         # 3. Merlin Wins: Specifically played as Merlin and won
         merlin_wins = sum(1 for p in completed_players if p.role == 'Merlin' and p.game.current_phase == 'GOOD_WINS')
+
+        # 4. Percival Wins: Specifically played as Percival and won
+        percival_wins = sum(1 for p in completed_players if p.role == 'Percival' and p.game.current_phase == 'GOOD_WINS')
+
+        # 5. Morgana Wins: Specifically played as Morgana and won
+        morgana_wins = sum(1 for p in completed_players if p.role == 'Morgana' and p.game.current_phase == 'EVIL_WINS')
+
+        # 6. Mordred Wins: Specifically played as Mordred and won
+        mordred_wins = sum(1 for p in completed_players if p.role == 'Mordred' and p.game.current_phase == 'EVIL_WINS')
+
         
         # Append data if they have a score above 0
         if evil_wins > 0:
@@ -289,21 +302,39 @@ def get_grudge_stats():
         if merlin_wins > 0:
             all_merlins.append({'username': u.username, 'profilename': u.profile.name, 'score': merlin_wins})
 
+        if percival_wins > 0:
+            all_percivals.append({'username': u.username, 'profilename': u.profile.name, 'score': percival_wins})
+
+        if morgana_wins > 0:
+            all_morganas.append({'username': u.username, 'profilename': u.profile.name, 'score': morgana_wins})
+
+        if mordred_wins > 0:
+            all_mordreds.append({'username': u.username, 'profilename': u.profile.name, 'score': mordred_wins})            
+
     # Sort lists by score descending
     all_betrayers.sort(key=lambda x: x['score'], reverse=True)
     all_detectives.sort(key=lambda x: x['score'], reverse=True)
     all_merlins.sort(key=lambda x: x['score'], reverse=True)
+    all_percivals.sort(key=lambda x: x['score'], reverse=True)
+    all_morganas.sort(key=lambda x: x['score'], reverse=True)
+    all_mordreds.sort(key=lambda x: x['score'], reverse=True)    
 
     return {
         # Single leaders (Backwards compatibility for home dashboard)
         'top_betrayer': all_betrayers[0] if all_betrayers else None,
         'worst_detective': all_detectives[0] if all_detectives else None,
         'best_merlin': all_merlins[0] if all_merlins else None,
+        'best_percival': all_percivals[0] if all_percivals else None,
+        'best_morgana': all_morganas[0] if all_morganas else None,
+        'best_mordred': all_mordreds[0] if all_mordreds else None,        
         
         # Top 5 Lists for the Leaderboard tables
         'top_betrayers': all_betrayers[:5],
         'worst_detectives': all_detectives[:5],
         'best_merlins': all_merlins[:5],
+        'best_percivals': all_percivals[:5],
+        'best_morganas': all_morganas[:5],
+        'best_mordreds': all_mordreds[:5],        
     }
 
 
