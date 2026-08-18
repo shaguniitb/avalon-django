@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
 from django.contrib.auth import login as auth_login
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, request
@@ -34,6 +35,24 @@ def register(request):
         form = UserCreationForm()
         
     return render(request, 'register.html', {'form': form})
+
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Updating the session keeps the user logged in after the password changes
+            update_session_auth_hash(request, user)
+            messages.success(request, "Your password has been successfully updated!")
+            return redirect('profile') # Redirects back to the profile page
+    else:
+        form = PasswordChangeForm(request.user)
+        
+    return render(request, 'change_password.html', {'form': form})
+
+
 
 def broadcast_game_update(room_code):
     channel_layer = get_channel_layer()
