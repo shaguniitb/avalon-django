@@ -247,6 +247,28 @@ def get_grudge_stats():
 
     MIN_GAMES = 3
 
+    # --- Overall Game Win Percentages ---
+    completed_games = GameRoom.objects.filter(
+        current_phase__in=['GOOD_WINS', 'EVIL_WINS']
+    ).exclude(
+        players__user__profile__is_test_account=True
+    ).distinct()
+
+    total_games = completed_games.count()
+    good_wins_count = completed_games.filter(current_phase='GOOD_WINS').count()
+    evil_wins_count = completed_games.filter(current_phase='EVIL_WINS').count()
+
+    # Split Evil wins by reason
+    evil_merlin_kills = completed_games.filter(current_phase='EVIL_WINS', victory_reason='MERLIN_KILLED').count()
+    evil_failed_missions = evil_wins_count - evil_merlin_kills # Captures failed missions and 5 failed votes
+
+    good_win_pct = round((good_wins_count / total_games * 100)) if total_games > 0 else 0
+    evil_win_pct = round((evil_wins_count / total_games * 100)) if total_games > 0 else 0
+    
+    evil_merlin_pct = round((evil_merlin_kills / evil_wins_count * 100)) if evil_wins_count > 0 else 0
+    evil_missions_pct = round((evil_failed_missions / evil_wins_count * 100)) if evil_wins_count > 0 else 0
+
+
     # Grab all users who have participated in a completed game
     users_with_games = User.objects.filter(
         player__game__current_phase__in=['GOOD_WINS', 'EVIL_WINS']
@@ -335,6 +357,14 @@ def get_grudge_stats():
         'best_percivals': all_percivals[:5],
         'best_morganas': all_morganas[:5],
         'best_mordreds': all_mordreds[:5],        
+
+        # Global Win Statistics
+        'total_games': total_games,
+        'good_win_pct': good_win_pct,
+        'evil_win_pct': evil_win_pct,
+        'evil_merlin_pct': evil_merlin_pct,
+        'evil_missions_pct': evil_missions_pct,
+
     }
 
 
