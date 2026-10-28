@@ -24,7 +24,7 @@ class PlayerInline(admin.TabularInline):
 @admin.register(GameRoom)
 class GameRoomAdmin(admin.ModelAdmin):
     # 2. Display the player links as a column in the main GameRoom table list
-    list_display = ('room_code', 'host', 'current_phase', 'get_player_links')
+    list_display = ('room_code', 'host', 'current_phase', 'get_player_links', 'created_at')
     
     # 3. Include the inline on the GameRoom change/edit form page
     inlines = [PlayerInline]
