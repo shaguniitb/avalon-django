@@ -132,7 +132,8 @@
             <emoji-picker id="emoji-picker" class="d-none position-absolute" style="bottom: 100%; right: 10px; z-index: 1060;"></emoji-picker>            
             <form id="chat-form" class="d-flex m-0">
                 <button type="button" id="emoji-btn" class="btn btn-light btn-sm border me-1">😀</button>                
-                <input type="text" id="chat-input" class="form-control form-control-sm me-2" autocomplete="off" placeholder="Say something..." required>
+                <input type="text" id="chat-input" class="form-control form-control-sm me-2" autocomplete="off" 
+                placeholder="{% if is_spectator %}Whisper to spectators...{% else %}Say something...{% endif %}" required>
                 <button type="submit" class="btn btn-primary btn-sm fw-bold">Send</button>
             </form>
         </div>
