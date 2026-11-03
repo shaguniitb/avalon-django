@@ -4,6 +4,7 @@
 {% block title %}Avalon - {{ room.room_code }}{% endblock %}
 
 {% block extra_head %}
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
     <link rel="stylesheet" href="{% static 'css/room.css' %}">
     <style>
         /* Setup the base transition for a smooth, cinematic phase-shift fade */
@@ -34,6 +35,47 @@
             border-color: rgba(220, 53, 69, 0.08) !important;
             box-shadow: 0 4px 20px rgba(220, 53, 69, 0.03);
         }
+
+        /* Chat Widget Styles */
+        #chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            z-index: 1050;
+            transition: transform 0.3s ease;
+        }
+
+        #chat-messages {
+            height: 250px;
+            overflow-y: auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            font-size: 0.85rem;
+        }
+
+        .chat-time {
+            font-size: 0.7rem;
+            color: #adb5bd;
+        }
+
+        .spectator-msg {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        #chat-widget.collapsed #chat-body {
+            display: none;
+        }
+
+        @media (max-width: 575.98px) {
+            #chat-widget {
+                width: 100%;
+                bottom: 0;
+                right: 0;
+                border-radius: 0;
+            }
+        }
+
     </style>
 {% endblock %}
 
@@ -66,6 +108,34 @@
     </div>
 
 {% include 'game/partials/vote_history.html' %}
+
+<!-- Floating Chat Widget -->
+<div id="chat-widget" class="card shadow-lg border-secondary">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2" id="chat-header" style="cursor: pointer;">
+        <span class="fw-bold"><i class="bi bi-chat-dots-fill me-2"></i> Room Chat</span>
+        <i class="bi bi-chevron-down" id="chat-toggle-icon"></i>
+    </div>
+    <div id="chat-body">
+        <div class="card-body p-2" id="chat-messages">
+            {% for chat in chat_history %}
+                <div class="chat-message {% if chat.is_spectator_only %}spectator-msg{% endif %} mb-1">
+                    <span class="chat-time">[{{ chat.timestamp|date:"H:i" }}]</span>
+                    <strong>{% if chat.is_spectator_only %}(Spec) {% endif %}{{ chat.sender.profile.name }}:</strong> 
+                    <span class="text-break">{{ chat.message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="card-footer p-2 bg-light position-relative">
+            <!-- The picker component (hidden by default) -->
+            <emoji-picker id="emoji-picker" class="d-none position-absolute" style="bottom: 100%; right: 10px; z-index: 1060;"></emoji-picker>            
+            <form id="chat-form" class="d-flex m-0">
+                <button type="button" id="emoji-btn" class="btn btn-light btn-sm border me-1">😀</button>                
+                <input type="text" id="chat-input" class="form-control form-control-sm me-2" autocomplete="off" placeholder="Say something..." required>
+                <button type="submit" class="btn btn-primary btn-sm fw-bold">Send</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -377,6 +447,27 @@ function celebrate() {
         // Listen for messages from the server
         gameSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
+
+
+            if (data.type === 'chat_message_broadcast') {
+                const chatBox = document.getElementById('chat-messages');
+                const isSpecClass = data.is_spectator_only ? 'spectator-msg' : '';
+                const specLabel = data.is_spectator_only ? '(Spec) ' : '';
+                
+                chatBox.innerHTML += `
+                    <div class="chat-message ${isSpecClass} mb-1">
+                        <span class="chat-time">[${data.timestamp}]</span>
+                        <strong>${specLabel}${data.sender_name}:</strong> 
+                        <span class="text-break">${data.message}</span>
+                    </div>
+                `;
+
+                // Auto-scroll to bottom
+                chatBox.scrollTop = chatBox.scrollHeight;
+                return; // Exit early so it doesn't trigger a page reload
+            }
+
+
             if (data.type === 'game_update') {
                 
                 // --- NEW: Intercept the toggle event and update UI without reloading ---
@@ -439,6 +530,77 @@ function celebrate() {
             window.location.href = path + '?t=' + new Date().getTime(); 
         }
     });
+
+// --- Chat Form Submission ---
+    const chatForm = document.getElementById('chat-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (message && gameSocket && gameSocket.readyState === WebSocket.OPEN) {
+                gameSocket.send(JSON.stringify({
+                    'action': 'chat_message',
+                    'message': message
+                }));
+                input.value = ''; 
+            }
+        });
+    }
+
+    // --- Chat Toggle (Collapse/Expand) ---
+    const chatHeader = document.getElementById('chat-header');
+    const chatWidget = document.getElementById('chat-widget');
+    const chatToggleIcon = document.getElementById('chat-toggle-icon');
+
+    if (chatHeader) {
+        chatHeader.addEventListener('click', function() {
+            chatWidget.classList.toggle('collapsed');
+            if (chatWidget.classList.contains('collapsed')) {
+                chatToggleIcon.classList.remove('bi-chevron-down');
+                chatToggleIcon.classList.add('bi-chevron-up');
+            } else {
+                chatToggleIcon.classList.remove('bi-chevron-up');
+                chatToggleIcon.classList.add('bi-chevron-down');
+                
+                // Scroll to bottom when opened
+                const chatBox = document.getElementById('chat-messages');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        });
+    }
+
+    // --- Initial Chat Scroll ---
+    window.addEventListener('load', () => {
+        const chatBox = document.getElementById('chat-messages');
+        if (chatBox) {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    });    
+
+const emojiBtn = document.getElementById('emoji-btn');
+    const emojiPicker = document.getElementById('emoji-picker');
+    const chatInput = document.getElementById('chat-input');
+
+    // Toggle picker visibility
+    emojiBtn.addEventListener('click', () => {
+        emojiPicker.classList.toggle('d-none');
+    });
+
+    // Insert emoji into input and close picker
+    emojiPicker.addEventListener('emoji-click', event => {
+        chatInput.value += event.detail.unicode;
+        emojiPicker.classList.add('d-none'); 
+        chatInput.focus();
+    });
+
+    // Close picker if clicking outside of it
+    document.addEventListener('click', (e) => {
+        if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+            emojiPicker.classList.add('d-none');
+        }
+    });    
 
 </script>
 {% endblock %}

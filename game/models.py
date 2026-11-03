@@ -213,6 +213,19 @@ class Spectator(models.Model):
     class Meta:
         unique_together = ('user', 'game')    
 
+class ChatMessage(models.Model):
+    game = models.ForeignKey(GameRoom, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_spectator_only = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+        
+    def __str__(self):
+        return f"[{self.timestamp.strftime('%H:%M')}] {self.sender.username}: {self.message[:20]}"
+
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):

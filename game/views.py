@@ -350,9 +350,15 @@ def game_room(request, room_code):
             if times_used < expected_uses:
                 is_lady_turn = True    
 
+    # Fetch chat history, filtering out spectator messages for active players
+    chat_history = room.messages.select_related('sender__profile').all()
+    if not is_spectator:
+        chat_history = chat_history.filter(is_spectator_only=False)                
+
     context = {
         'room': room,
         'player': player,
+        'chat_history': chat_history,
         'all_players': all_players,
         'spectators': all_spectators,
         'knowledge': knowledge_data["text"] if knowledge_data else None,
